@@ -2,7 +2,6 @@
 
 mod hid;
 
-use core::{slice::SlicePattern, time};
 use std::{
     fmt::{self},
     io::{self, Read},
@@ -15,16 +14,24 @@ use hid::Headphone;
 use hidapi::HidApi;
 use tray_icon::{
     menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    TrayIconBuilder, TrayIconEvent,
+    TrayIcon, TrayIconBuilder, TrayIconEvent,
 };
-use winit::event_loop::{ControlFlow, EventLoopBuilder};
+use winit::{
+    event::WindowEvent,
+    event_loop::{ControlFlow, EventLoopBuilder},
+};
+
+struct IconState {
+    headphone: Option<Headphone>,
+    icons: Vec<tray_icon::Icon>,
+}
 
 fn main() {
     let controller = hid::Controller::new();
 
-    let icon_state = IconState {
+    let mut icon_state = IconState {
         headphone: controller.get_device(),
-        last_state: 0,
+        icons: load_icons(),
     };
 
     let event_loop = EventLoopBuilder::new().build().unwrap();
@@ -32,17 +39,18 @@ fn main() {
     let menu_channel = MenuEvent::receiver();
     let tray_channel = TrayIconEvent::receiver();
     let menu_close = MenuItem::new("Close", true, None);
+
     let menu = Menu::new();
 
     menu.append(&menu_close);
 
     let mut tray = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
-        .with_icon(icon)
+        .with_icon(tray_icon::Icon::from_resource(1, None).unwrap())
         .build()
         .unwrap();
 
-    update_icon(&tray, headphone.as_ref());
+    update(&tray, &mut icon_state);
 
     let mut last_update = Instant::now();
 
@@ -52,7 +60,7 @@ fn main() {
         ));
 
         if last_update.elapsed() > Duration::from_secs(1) {
-            update_icon(&tray, headphone.as_ref());
+            update(&tray, &mut icon_state);
             last_update = Instant::now();
         }
 
@@ -64,9 +72,20 @@ fn main() {
     });
 }
 
-fn update_icon(tray: &tray_icon::TrayIcon, state: &mut IconState) -> tray_icon::Result<()> {
-    if let Some(headphone) = &headphone {
-        tray.set_tooltip(Some(headphone.to_string()))?;
+fn update(tray: &tray_icon::TrayIcon, state: &mut IconState) -> tray_icon::Result<()> {
+    if let Some(ref mut headphone) = state.headphone {
+        let changed = headphone.update().unwrap();
+
+        if changed {
+            tray.set_tooltip(Some(dbg!(headphone.to_string())))?;
+
+            let icon_idx: usize = if is_dark_mode() {
+                headphone.battery_state as usize
+            } else {
+                headphone.battery_state as usize + 5
+            };
+            tray.set_icon(Some(state.icons[icon_idx].clone()))?;
+        }
     } else {
         tray.set_tooltip(Some("Unconnected"))?;
     }
@@ -74,30 +93,27 @@ fn update_icon(tray: &tray_icon::TrayIcon, state: &mut IconState) -> tray_icon::
     Ok(())
 }
 
-const RAW_ICONS: &[&'static [u8]] = &[
-    include_bytes!("bat/battery0.png"),
-    include_bytes!("bat/battery1.png"),
-    include_bytes!("bat/battery2.png"),
-    include_bytes!("bat/battery3.png"),
-    include_bytes!("bat/battery4.png"),
-];
-
-fn load_icons() -> Result<&'static [&'static tray_icon::Icon], tray_icon::BadIcon> {
-    RAW_ICONS.iter().map(|raw| {
-        let (icon_rgba, icon_width, icon_height) = {
-            let image = image::load_from_memory_with_format(raw, image::ImageFormat::Png)
-                .unwrap()
-                .to_rgba8();
-            let (width, height) = image.dimensions();
-            let rgba = image.into_raw();
-            (rgba, width, height)
-        };
-        &tray_icon::Icon::from_rgba(icon_rgba, icon_width, icon_height)
-    }).collect();
-
+// Icons are in resources at IDs [10, 20, 30, 40, 50]
+fn load_icons() -> Vec<tray_icon::Icon> {
+    (10..=50)
+        .step_by(10)
+        .chain((11..=51).step_by(10))
+        .map(|d| {
+            tray_icon::Icon::from_resource(d, None).expect(&format!("Failed to find icon #{d}"))
+        })
+        .collect()
 }
 
-struct IconState {
-    headphone: Option<Headphone>,
-    last_state: u8,
+const SUBKEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+const VALUE: &str = "AppsUseLightTheme";
+
+pub fn is_dark_mode() -> bool {
+    let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
+    if let Ok(subkey) = hkcu.open_subkey(SUBKEY) {
+        if let Ok(dword) = subkey.get_value::<u32, _>(VALUE) {
+            return dword == 0;
+        }
+    }
+
+    false
 }

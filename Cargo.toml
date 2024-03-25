@@ -1,8 +1,11 @@
 [package]
-name = "arctis_battery"
+name = "arctis-battery-indicator"
 version = "0.1.0"
 edition = "2021"
-
+authors = ["Aaro Luomanen"]
+description = "Battery icon for the SteelSeries Arctis headset."
+license = "MIT"
+homepage = "https://github.com/aarol/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -11,6 +14,7 @@ hidapi = {version = "2.6.1"}
 image = "0.25.0"
 tray-icon = "0.12.0"
 winit = "0.29.15"
+winreg = "0.52.0"
 
 [build-dependencies]
 winres = "0.1"

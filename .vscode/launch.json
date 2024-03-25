@@ -7,15 +7,15 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'arctis_battery'",
+      "name": "Debug executable 'arctis-battery-indicator'",
       "cargo": {
         "args": [
           "build",
-          "--bin=arctis_battery",
-          "--package=arctis_battery"
+          "--bin=arctis-battery-indicator",
+          "--package=arctis-battery-indicator"
         ],
         "filter": {
-          "name": "arctis_battery",
+          "name": "arctis-battery-indicator",
           "kind": "bin"
         }
       },

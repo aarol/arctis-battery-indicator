@@ -6,7 +6,7 @@ pub struct Headphone {
     device: HidDevice,
     name: Option<String>,
     /// percentage in range [0,4]
-    battery_state: u8,
+    pub battery_state: u8,
     /// - 0: not connected
     /// - 1: charging
     /// - 3: discharging
@@ -14,29 +14,37 @@ pub struct Headphone {
 }
 
 impl Headphone {
-    pub fn battery_percentage(&self) -> f32 {
-        return self.battery_state as f32 / 4.0;
+    pub fn battery_percentage(&self) -> i32 {
+        ((self.battery_state as f32 / 4.0) * 100.0) as i32
     }
 
     pub fn charging_status(&self) -> &str {
-        return match self.charging_state {
+        match self.charging_state {
             1 => "Charging",
             3 => "Discharging",
             _ => "Disconnected",
-        };
+        }
     }
 
-    pub fn update(&mut self) -> hidapi::HidResult<()> {
+    /// if return is Ok(true), state has changed
+    pub fn update(&mut self) -> hidapi::HidResult<bool> {
         self.device.write(&[0x0, 0xb0])?;
 
         let mut buf = [0u8; 4];
 
         self.device.read_timeout(&mut buf, 100)?;
 
+        // save old state
+        let Headphone {
+            battery_state: old_battery,
+            charging_state: old_charging,
+            ..
+        } = *self;
+
         self.battery_state = buf[2];
         self.charging_state = buf[3];
 
-        Ok(())
+        Ok(self.battery_state != old_battery || self.charging_state != old_charging)
     }
 }
 
@@ -47,8 +55,8 @@ impl std::fmt::Display for Headphone {
         }
 
         f.write_fmt(format_args!(
-            "{} - {}%",
-            self.battery_percentage() * 100.0
+            "{}% - {}",
+            self.battery_percentage(),
             self.charging_status(),
         ))?;
 
@@ -82,7 +90,7 @@ impl Controller {
             };
 
             // try to write to device
-            if let Err(_) = device.write(&[0x0, 0xb0]) {
+            if device.write(&[0x0, 0xb0]).is_err() {
                 continue;
             }
             let mut buf = [0u8; 4];
@@ -99,10 +107,11 @@ impl Controller {
             return Some(Headphone {
                 device,
                 name: device_name,
-                battery_state: buf[2],
-                charging_state: buf[3],
+                battery_state: 0,
+                charging_state: 0,
             });
         }
-        return None;
+
+        None
     }
 }
