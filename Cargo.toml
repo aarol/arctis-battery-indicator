@@ -11,7 +11,6 @@ homepage = "https://github.com/aarol/"
 
 [dependencies]
 hidapi = {version = "2.6.1"}
-image = "0.25.0"
 tray-icon = "0.12.0"
 winit = "0.29.15"
 winreg = "0.52.0"

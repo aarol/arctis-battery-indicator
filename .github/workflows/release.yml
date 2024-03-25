@@ -1,0 +1,27 @@
+name: Release
+on:
+  push:
+    tags: "v*"
+
+jobs:
+  release:
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release
+
+      - name: Compile .ISS to .EXE Installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: installer.iss
+
+      - run: mv Output\mysetup.exe Installer.exe
+      
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Installer.exe
+          
+          generate_release_notes: true
+          name: Release ${{github.ref_name}}
