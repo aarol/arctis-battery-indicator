@@ -6,9 +6,16 @@ on:
 jobs:
   release:
     runs-on: windows-latest
-    
+
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            **/target
+          key: Cargo.lock
+
       - run: cargo build --release
 
       - name: Compile .ISS to .EXE Installer
@@ -16,12 +23,13 @@ jobs:
         with:
           path: installer.iss
 
-      - run: mv Output\mysetup.exe Installer.exe
-      
+      - run: Compress-Archive Output\mysetup.exe arctis-battery-indicator.zip
+        shell: powershell
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            Installer.exe
-          
+            arctis-battery-indicator.zip
+
           generate_release_notes: true
           name: Release ${{github.ref_name}}
