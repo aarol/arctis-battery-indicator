@@ -20,7 +20,7 @@ jobs:
 
       - run: mv target/release/*.exe .
 
-      - run: Compress-Archive *.exe Install.ps1 arctis-battery-indicator-${{github.ref_name}}.zip
+      - run: Compress-Archive -Path *.exe,Install.ps1 -DestinationPath arctis-battery-indicator-${{github.ref_name}}.zip
         shell: powershell
 
       - uses: softprops/action-gh-release@v2
