@@ -1,19 +1,32 @@
 [package]
 name = "arctis-battery-indicator"
-version = "0.1.0"
+version = "1.1.0"
 edition = "2021"
 authors = ["Aaro Luomanen"]
 description = "Battery icon for the SteelSeries Arctis headset."
 license = "MIT"
 homepage = "https://github.com/aarol/"
+default-run = "arctis-battery-indicator-debug"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "arctis-battery-indicator-debug"
+path = "src/bin/debug.rs"
+
 [dependencies]
+anyhow = "1.0.81"
+dirs = "5.0.1"
 hidapi = {version = "2.6.1"}
+log = "0.4.21"
+simplelog = { version = "0.12.2", features = ["paris"] }
 tray-icon = "0.12.0"
 winit = "0.29.15"
 winreg = "0.52.0"
 
 [build-dependencies]
 winres = "0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
