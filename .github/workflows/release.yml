@@ -10,11 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v2
-        with:
-          path: |
-            **/target
-          key: Cargo.lock
+      - uses: Swatinem/rust-cache@v2
 
       - run: cargo build --release
 

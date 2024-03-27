@@ -30,7 +30,7 @@ $Shortcut.Save()
 
 Write-Output "Added shortcut to $ShortcutPath"
 
-Start-Process $ServiceExePath
+Start-Process $ServiceExePath -WorkingDirectory $InstallDir
 
 Write-Output "Started Arctis Battery Indicator"
 
