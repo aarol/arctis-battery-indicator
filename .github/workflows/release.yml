@@ -18,18 +18,15 @@ jobs:
 
       - run: cargo build --release
 
-      - name: Compile .ISS to .EXE Installer
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
-        with:
-          path: installer.iss
+      - run: mv target/release/*.exe .
 
-      - run: Compress-Archive Output\mysetup.exe arctis-battery-indicator.zip
+      - run: Compress-Archive *.exe Install.ps1 arctis-battery-indicator-${{github.ref_name}}.zip
         shell: powershell
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            arctis-battery-indicator.zip
+            arctis-battery-indicator-${{github.ref_name}}.zip
 
           generate_release_notes: true
           name: Release ${{github.ref_name}}
