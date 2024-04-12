@@ -1,5 +1,4 @@
 mod hid;
-mod config;
 
 use std::time::{Duration, Instant};
 

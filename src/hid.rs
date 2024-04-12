@@ -1,5 +1,6 @@
+use anyhow::Context;
 use hidapi::HidDevice;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 
 pub struct Headphone {
     device: HidDevice,
