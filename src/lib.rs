@@ -1,9 +1,10 @@
 mod hid;
+mod config;
 
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use hid::{find_headphone, Headphone};
+use hid::Headphone;
 use log::{error, info};
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
@@ -11,7 +12,7 @@ use tray_icon::{
 };
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
 
-struct IconState {
+struct AppState {
     headphone: Option<Headphone>,
     icons: Vec<tray_icon::Icon>,
 }
@@ -19,8 +20,13 @@ struct IconState {
 pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
 
-    let mut icon_state = IconState {
-        headphone: hid::find_headphone(),
+    let headphone = hid::find_headphone().unwrap_or_else(|err| {
+        error!("{err:?}");
+        None
+    });
+
+    let mut app_state = AppState {
+        headphone,
         icons: load_icons(),
     };
 
@@ -44,11 +50,11 @@ pub fn run() -> anyhow::Result<()> {
 
     let tray = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
-        .with_icon(icon_state.icons[icon_index(0)].clone())
+        .with_icon(app_state.icons[icon_index(0)].clone())
         .build()
         .context("Failed to create tray icon")?;
 
-    if let Err(e) = update(&tray, &mut icon_state) {
+    if let Err(e) = update(&tray, &mut app_state) {
         error!("Failed to update status: {e:?}");
     };
 
@@ -61,7 +67,7 @@ pub fn run() -> anyhow::Result<()> {
             ));
 
             if last_update.elapsed() > Duration::from_millis(500) {
-                if let Err(e) = update(&tray, &mut icon_state) {
+                if let Err(e) = update(&tray, &mut app_state) {
                     error!("Failed to update status: {e:?}");
                 };
                 last_update = Instant::now();
@@ -89,31 +95,44 @@ pub fn run() -> anyhow::Result<()> {
                     }
                 }
             }
+            // system dark/light mode changes would be listened for here
+            // unfortunately, window events don't seem to be emitted
+            // when the event loop doesn't have a window attached.
         })
         .context("Event loop exited unexpectedly")?;
 
     Ok(())
 }
 
-fn update(tray: &tray_icon::TrayIcon, state: &mut IconState) -> anyhow::Result<()> {
+fn update(tray: &tray_icon::TrayIcon, state: &mut AppState) -> anyhow::Result<()> {
     if state.headphone.is_none() {
-        state.headphone = find_headphone()
+
+        state.headphone = hid::find_headphone().unwrap_or_else(|err| {
+            error!("{err:?}");
+            None
+        });
     }
 
     match state.headphone {
-        Some(ref mut headphone) => {
-            let changed = headphone.update()?;
-
-            if changed {
-                let tooltip_text = headphone.to_string();
-                info!("State has changed. New state: {tooltip_text}");
-                tray.set_tooltip(Some(tooltip_text))?;
-
-                tray.set_icon(Some(
-                    state.icons[icon_index(headphone.battery_state)].clone(),
-                ))?;
+        Some(ref mut headphone) => match headphone.update() {
+            Err(err) => {
+                // an error will only occur when reading/writing to the device fails
+                // in that situation, the best course of action is to try to reconnect
+                error!("Failed to access device: {err:?}; trying to reconnect...");
+                state.headphone = None
             }
-        }
+            Ok(changed) => {
+                if changed {
+                    let tooltip_text = headphone.to_string();
+                    info!("State has changed. New state: {tooltip_text}");
+                    tray.set_tooltip(Some(tooltip_text))?;
+
+                    tray.set_icon(Some(
+                        state.icons[icon_index(headphone.battery_state)].clone(),
+                    ))?;
+                }
+            }
+        },
         None => {
             tray.set_tooltip(Some("No headphone adapter found"))?;
         }
@@ -123,13 +142,14 @@ fn update(tray: &tray_icon::TrayIcon, state: &mut IconState) -> anyhow::Result<(
 }
 
 // Icons are in resources at IDs [10, 20, 30, 40, 50]
+// additionally, light mode icons are at [11, 21, 31, 41, 51]
 fn load_icons() -> Vec<tray_icon::Icon> {
     (10..=50)
         .step_by(10)
         .chain((11..=51).step_by(10))
         .map(|d| {
             tray_icon::Icon::from_resource(d, None)
-                .unwrap_or_else(|_| panic!("Failed to find icon #{d}"))
+                .unwrap_or_else(|err| panic!("Failed to find icon #{d}: {err}"))
         })
         .collect()
 }

@@ -20,26 +20,26 @@ impl Headphone {
 
     pub fn charging_status(&self) -> Option<&str> {
         self.charging_state.map(|state| match state {
-            1 => "Charging",
-            3 => {
-                if self.battery_state < 2 {
-                    "Charge soon!"
-                } else {
-                    "Connected"
-                }
-            }
-            _ => "Disconnected",
+            1 => "(Charging)",
+            3 => "",
+            _ => "(Disconnected)",
         })
     }
 
     /// if return is Ok(true), state has changed
     pub fn update(&mut self) -> hidapi::HidResult<bool> {
         self.device.write(&self.model.write_bytes)?;
+        let mut buf = [0u8; 64];
 
-        let mut buf = [0u8; 4];
+        // timeout because we don't want to block indefinitely here
+        let n = self.device.read_timeout(&mut buf, 100)?;
 
-        // timeout because some devices will block here indefinitely
-        self.device.read_timeout(&mut buf, 100)?;
+        trace!("read {n}: {:?}", &buf[0..5]);
+
+        if n == 0 || buf[0] == 0 || !self.model.write_bytes.contains(&buf[0]) {
+            trace!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
+            return Ok(false);
+        }
 
         // save old state
         let Headphone {
@@ -48,22 +48,24 @@ impl Headphone {
             ..
         } = *self;
 
-        // Why do the values overflow on first connection?
-        // Overflow values seen: [46, 48]
-        if buf[self.model.battery_percent_idx] <= 4 {
-            self.battery_state = buf[self.model.battery_percent_idx];
+        let battery_state = buf[self.model.battery_percent_idx];
+
+        if battery_state <= 4 {
+            self.battery_state = battery_state;
         } else {
             debug!(
-                "Returned battery state overflows; ignoring: {}",
-                buf[self.model.battery_percent_idx]
+                "Returned battery state overflows: {}; ignoring",
+                battery_state
             );
         }
 
         if let Some(idx) = self.model.charging_status_idx {
-            if buf[idx] < 4 {
-                self.charging_state = Some(buf[idx]);
+            let charging_state = buf[idx];
+
+            if charging_state < 4 {
+                self.charging_state = Some(charging_state);
             } else {
-                debug!("Returned charge state overflows; ignoring: {}", buf[idx])
+                debug!("Returned charge state overflows: {}; ignoring", buf[idx])
             }
         }
 
@@ -73,14 +75,10 @@ impl Headphone {
 
 impl std::fmt::Display for Headphone {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "{}: {}%",
-            self.name,
-            self.battery_percentage()
-        ))?;
+        write!(f, "{}: {}% remaining", self.name, self.battery_percentage())?;
 
         if let Some(status) = self.charging_status() {
-            f.write_fmt(format_args!(" - {status}"))?;
+            write!(f, " {status}",)?;
         }
 
         Ok(())
@@ -88,20 +86,21 @@ impl std::fmt::Display for Headphone {
 }
 
 /// Returns the first matching device
-pub fn find_headphone() -> Option<Headphone> {
+pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     info!("Searching for connected headphones...");
 
-    let mut api = hidapi::HidApi::new_without_enumerate().expect("Failed to initialize hidapi");
+    let mut api = hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
 
     // SteelSeries HID vendor ID
     // https://devicehunt.com/search/type/usb/vendor/1038/device/any
-    api.add_devices(0x1038, 0).expect("Failed to scan devices");
+    api.add_devices(0x1038, 0)
+        .context("Failed to scan devices")?;
 
     for device in api.device_list() {
+        let product_id = device.product_id();
+        let interface_number = device.interface_number();
         for model in KNOWN_HEADPHONES {
-            if device.product_id() == model.product_id
-                && device.interface_number() == model.interface_num
-            {
+            if product_id == model.product_id && interface_number == model.interface_num {
                 let device = match device.open_device(&api) {
                     Ok(d) => d,
                     Err(err) => {
@@ -110,24 +109,26 @@ pub fn find_headphone() -> Option<Headphone> {
                     }
                 };
 
-                let device_name = device.get_product_string().unwrap_or(None);
+                let device_name = device
+                    .get_product_string()?
+                    .unwrap_or_else(|| model.name.to_owned());
 
-                info!("Found headphone: {}", model.name);
+                info!("Found headphone: {device_name}");
 
-                return Some(Headphone {
+                return Ok(Some(Headphone {
                     device,
                     model: *model,
-                    name: device_name.unwrap_or(model.name.to_owned()),
+                    name: device_name,
                     battery_state: 0,
                     charging_state: None,
-                });
+                }));
             }
         }
     }
 
     warn!("Found no connected headphones!");
 
-    None
+    Ok(None)
 }
 
 #[derive(Copy, Clone)]
@@ -283,14 +284,19 @@ mod test {
 
     #[test]
     fn unique_product_ids() {
-        let mut seen: HashMap<u16, bool> = HashMap::new();
+        let mut seen_product_ids: HashMap<u16, bool> = HashMap::new();
+        let mut seen_names: HashMap<&str, bool> = HashMap::new();
         KNOWN_HEADPHONES.iter().for_each(|h| {
             assert!(
-                !seen.contains_key(&h.product_id),
+                seen_product_ids.insert(h.product_id, true) == None,
                 "duplicate entries for {:#x}",
                 &h.product_id
             );
-            seen.insert(h.product_id, true);
+            assert!(
+                seen_names.insert(h.name, true) == None,
+                "duplicate entries for {}",
+                &h.name
+            );
         });
     }
 }

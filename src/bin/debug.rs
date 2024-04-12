@@ -4,7 +4,7 @@ use simplelog::{Config, TermLogger};
 
 fn main() {
     TermLogger::init(
-        log::LevelFilter::Debug,
+        log::LevelFilter::Trace,
         Config::default(),
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,

@@ -30,6 +30,10 @@ This is limitation of the headphones themselves, as the device only exposes 5 po
 
 Your headphones might be unsupported due to being a newer model. Either [create a new issue](https://github.com/aarol/arctis-battery-indicator/issues/new) or see [Adding a new headphone](#adding-a-new-headphone)
 
+### Connection status updates slowly / unreliably
+
+This sometimes happens when the SteelSeries GG application is open in the background. I haven't found a way to prevent this from happening yet.
+
 ## Development
 
 Rust and Cargo need to be installed.
@@ -38,10 +42,11 @@ Rust and Cargo need to be installed.
 
 * Installing the application locally: `cargo install`
 
+* Debugging the application: press `F5` in VS Code with the Rust Analyzer extension installed.
+
 ## Todo
 
 * Show rough estimations for battery remaining battery life (in hours)
-  * Need to figure out if the battery states are distributed evenly or not
 
 ## Adding a new headphone
 

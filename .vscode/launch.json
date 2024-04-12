@@ -11,11 +11,10 @@
       "cargo": {
         "args": [
           "build",
-          "--bin=arctis-battery-indicator",
-          "--package=arctis-battery-indicator"
+          "--bin=arctis-battery-indicator-debug",
         ],
         "filter": {
-          "name": "arctis-battery-indicator",
+          "name": "arctis-battery-indicator-debug",
           "kind": "bin"
         }
       },
