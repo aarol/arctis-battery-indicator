@@ -1,5 +1,11 @@
+use std::vec;
+
+use anyhow::Context;
 use hidapi::HidDevice;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
+use serde::Deserialize;
+
+use crate::config;
 
 pub struct Headphone {
     device: HidDevice,
@@ -89,6 +95,11 @@ impl std::fmt::Display for Headphone {
 pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     info!("Searching for connected headphones...");
 
+    let custom_headphones = config::load_custom_headphones("config.toml").unwrap_or_else(|err| {
+        error!("Failed to read config.toml: {err:?}");
+        vec![]
+    });
+
     let mut api = hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
 
     // SteelSeries HID vendor ID
@@ -99,6 +110,40 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     for device in api.device_list() {
         let product_id = device.product_id();
         let interface_number = device.interface_number();
+
+        for custom in &custom_headphones {
+            if product_id == custom.product_id && interface_number == custom.interface_num {
+                let device = match device.open_device(&api) {
+                    Ok(d) => d,
+                    Err(err) => {
+                        error!("Failed to open device: {err:?}");
+                        continue;
+                    }
+                };
+
+                let device_name = device
+                    .get_product_string()?
+                    .unwrap_or_else(|| custom.name.to_owned());
+
+                info!("Found headphone: {device_name}");
+
+                return Ok(Some(Headphone {
+                    device,
+                    model: HeadphoneModel {
+                        name: custom.name.clone().leak(),
+                        product_id: custom.product_id,
+                        interface_num: custom.interface_num,
+                        write_bytes: custom.write_bytes,
+                        battery_percent_idx: custom.battery_percent_idx,
+                        charging_status_idx: custom.charging_status_idx,
+                    },
+                    name: device_name,
+                    battery_state: 0,
+                    charging_state: None,
+                }));
+            }
+        }
+
         for model in KNOWN_HEADPHONES {
             if product_id == model.product_id && interface_number == model.interface_num {
                 let device = match device.open_device(&api) {
@@ -131,8 +176,8 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     Ok(None)
 }
 
-#[derive(Copy, Clone)]
-struct HeadphoneModel {
+#[derive(Clone, Copy, Deserialize)]
+pub struct HeadphoneModel {
     name: &'static str,
     product_id: u16,
     /// Magic bytes that make the device output battery information
@@ -140,6 +185,10 @@ struct HeadphoneModel {
     interface_num: i32,
     battery_percent_idx: usize,
     charging_status_idx: Option<usize>,
+}
+
+trait MatchesDevice {
+    fn matches_device(product_id: u16, interface_number: i32) -> bool;
 }
 
 // found in https://github.com/richrace/arctis-usb-finder/blob/745a4f68b8394487ae549ef0eebf637ef6e26dd3/src/models/known_headphone.ts

@@ -19,7 +19,9 @@ anyhow = "1.0.81"
 dirs = "5.0.1"
 hidapi = {version = "2.6.1"}
 log = "0.4.21"
+serde = "1.0.197"
 simplelog = { version = "0.12.2", features = ["paris"] }
+toml = "0.8.12"
 tray-icon = "0.12.0"
 winit = "0.29.15"
 winreg = "0.52.0"
