@@ -12,8 +12,8 @@ Adds a small icon to the "system tray" area of the Windows task bar, which displ
 
 ## Installation
 
-* Download the [latest release](https://github.com/aarol/arctis-battery-indicator/releases/latest) ZIP file and extract it somewhere.
-
+* Download the [latest release](https://github.com/aarol/arctis-battery-indicator/releases/latest) .zip file
+* Extract all of the files into any folder (like Downloads).
 * Right click `Install.ps1` and run the PowerShell script.
 
 You can also update the program by downloading a new version and running `Install.ps1`.
@@ -53,3 +53,5 @@ Rust and Cargo need to be installed.
 Add a new entry to the bottom of `KNOWN_HEADPHONES` in [hid.rs](src/hid.rs#L142) and submit a new pull request.
 
 The parameters, such as `write_bytes` and `battery_percent_idx` can be discovered by sniffing the USB traffic with something like [WireShark](https://www.wireshark.org/) and [USBPcap](https://desowin.org/usbpcap/)
+
+I have a page on my website explaining how this works: <https://aarol.dev/posts/arctis-hid>
