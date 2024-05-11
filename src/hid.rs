@@ -1,7 +1,9 @@
 use anyhow::Context;
 use hidapi::HidDevice;
 use log::{debug, error, info, trace, warn};
+use rust_i18n::t;
 
+#[derive(Debug)]
 pub struct Headphone {
     device: HidDevice,
     model: HeadphoneModel,
@@ -19,11 +21,11 @@ impl Headphone {
         ((self.battery_state as f32 / 4.0) * 100.0) as i32
     }
 
-    pub fn charging_status(&self) -> Option<&str> {
+    pub fn charging_status(&self) -> Option<String> {
         self.charging_state.map(|state| match state {
-            1 => "(Charging)",
-            3 => "",
-            _ => "(Disconnected)",
+            1 => t!("device_charging").into(),
+            3 => "".into(),
+            _ => t!("device_disconnected").into(),
         })
     }
 
@@ -76,7 +78,13 @@ impl Headphone {
 
 impl std::fmt::Display for Headphone {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}% remaining", self.name, self.battery_percentage())?;
+        write!(
+            f,
+            "{name}: {battery}% {remaining}",
+            name = self.name,
+            battery = self.battery_percentage(),
+            remaining = t!("battery_remaining")
+        )?;
 
         if let Some(status) = self.charging_status() {
             write!(f, " {status}",)?;
@@ -141,6 +149,14 @@ struct HeadphoneModel {
     interface_num: i32,
     battery_percent_idx: usize,
     charging_status_idx: Option<usize>,
+}
+
+impl std::fmt::Debug for HeadphoneModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HeadphoneModel")
+            .field("product_id", &format!("0x{:x}", self.product_id))
+            .finish_non_exhaustive()
+    }
 }
 
 // found in https://github.com/richrace/arctis-usb-finder/blob/745a4f68b8394487ae549ef0eebf637ef6e26dd3/src/models/known_headphone.ts
@@ -289,12 +305,12 @@ mod test {
         let mut seen_names: HashMap<&str, bool> = HashMap::new();
         KNOWN_HEADPHONES.iter().for_each(|h| {
             assert!(
-                seen_product_ids.insert(h.product_id, true) == None,
+                seen_product_ids.insert(h.product_id, true).is_none(),
                 "duplicate entries for {:#x}",
                 &h.product_id
             );
             assert!(
-                seen_names.insert(h.name, true) == None,
+                seen_names.insert(h.name, true).is_none(),
                 "duplicate entries for {}",
                 &h.name
             );

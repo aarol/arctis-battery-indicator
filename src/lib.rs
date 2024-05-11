@@ -5,11 +5,14 @@ use std::time::{Duration, Instant};
 use anyhow::Context;
 use hid::Headphone;
 use log::{error, info};
+use rust_i18n::t;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
     TrayIconBuilder,
 };
 use winit::event_loop::{ControlFlow, EventLoopBuilder};
+
+rust_i18n::i18n!("locales", fallback = "en-US");
 
 struct AppState {
     headphone: Option<Headphone>,
@@ -18,6 +21,8 @@ struct AppState {
 
 pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
+
+    rust_i18n::set_locale(&sys_locale::get_locale().unwrap_or("en-US".to_owned()));
 
     let headphone = hid::find_headphone().unwrap_or_else(|err| {
         error!("{err:?}");
@@ -34,9 +39,9 @@ pub fn run() -> anyhow::Result<()> {
         .context("Failed to create event loop")?;
 
     let menu_channel = MenuEvent::receiver();
-    let menu_logs = MenuItem::new("View logs", true, None);
-    let menu_github = MenuItem::new("View on Github", true, None);
-    let menu_close = MenuItem::new("Close", true, None);
+    let menu_logs = MenuItem::new(t!("view_logs"), true, None);
+    let menu_github = MenuItem::new(t!("view_on_github"), true, None);
+    let menu_close = MenuItem::new(t!("quit_program"), true, None);
 
     let menu = Menu::new();
 
@@ -73,25 +78,28 @@ pub fn run() -> anyhow::Result<()> {
             }
 
             if let Ok(event) = menu_channel.try_recv() {
-                if event.id == menu_close.id() {
-                    // close button
-                    event_loop.exit()
-                } else if event.id == menu_github.id() {
-                    // github button
-                    let url = "https://github.com/aarol/arctis-battery-indicator";
+                match event.id {
+                    id if id == menu_close.id() => event_loop.exit(),
 
-                    if let Err(e) = std::process::Command::new("explorer").arg(url).spawn() {
-                        error!("Failed to open {url}: {e:?}");
-                    }
-                } else if event.id == menu_logs.id() {
-                    // logs button
-                    if let Some(local_appdata) = dirs::data_local_dir() {
-                        let path = local_appdata.join("ArctisBatteryIndicator");
+                    id if id == menu_github.id() => {
+                        let url = "https://github.com/aarol/arctis-battery-indicator";
 
-                        if let Err(e) = std::process::Command::new("explorer").arg(&path).spawn() {
-                            error!("Failed to path {path:?}: {e:?}");
+                        if let Err(e) = std::process::Command::new("explorer").arg(url).spawn() {
+                            error!("Failed to open {url}: {e:?}");
                         }
                     }
+                    id if id == menu_logs.id() => {
+                        if let Some(local_appdata) = dirs::data_local_dir() {
+                            let path = local_appdata.join("ArctisBatteryIndicator");
+
+                            if let Err(e) =
+                                std::process::Command::new("explorer").arg(&path).spawn()
+                            {
+                                error!("Failed to open path {path:?}: {e:?}");
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             // system dark/light mode changes would be listened for here
@@ -105,7 +113,6 @@ pub fn run() -> anyhow::Result<()> {
 
 fn update(tray: &tray_icon::TrayIcon, state: &mut AppState) -> anyhow::Result<()> {
     if state.headphone.is_none() {
-
         state.headphone = hid::find_headphone().unwrap_or_else(|err| {
             error!("{err:?}");
             None
@@ -123,7 +130,7 @@ fn update(tray: &tray_icon::TrayIcon, state: &mut AppState) -> anyhow::Result<()
             Ok(changed) => {
                 if changed {
                     let tooltip_text = headphone.to_string();
-                    info!("State has changed. New state: {tooltip_text}");
+                    info!("State has changed. New state: {headphone:?}");
                     tray.set_tooltip(Some(tooltip_text))?;
 
                     tray.set_icon(Some(
@@ -133,7 +140,7 @@ fn update(tray: &tray_icon::TrayIcon, state: &mut AppState) -> anyhow::Result<()
             }
         },
         None => {
-            tray.set_tooltip(Some("No headphone adapter found"))?;
+            tray.set_tooltip(Some(t!("no_adapter_found")))?;
         }
     }
 
