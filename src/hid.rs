@@ -1,5 +1,5 @@
 use anyhow::Context;
-use hidapi::HidDevice;
+use hidapi::{DeviceInfo, HidApi, HidDevice};
 use log::{debug, error, info, trace, warn};
 use rust_i18n::t;
 
@@ -100,37 +100,38 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
 
     let mut api = hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
 
-    // SteelSeries HID vendor ID
+    // Filter by SteelSeries HID vendor ID, no filter (0) for product ID
+    //
     // https://devicehunt.com/search/type/usb/vendor/1038/device/any
     api.add_devices(0x1038, 0)
         .context("Failed to scan devices")?;
 
     for device in api.device_list() {
+        // first, try using usage_id and usage_page
+        let usage_id = device.usage();
+        let usage_page = device.usage_page();
+
+        for model in KNOWN_HEADPHONES {
+            if let Some((model_usage_id, model_usage_page)) = model.usage_page {
+                if model_usage_id == usage_id && model_usage_page == usage_page {
+                    match connect_device(&api, model, device) {
+                        Some(headphone) => return Ok(Some(headphone)),
+                        None => continue,
+                    }
+                }
+            }
+        }
+
+        // then, try to connect with p_id and interface number
         let product_id = device.product_id();
         let interface_number = device.interface_number();
+
         for model in KNOWN_HEADPHONES {
-            if product_id == model.product_id && interface_number == model.interface_num {
-                let device = match device.open_device(&api) {
-                    Ok(d) => d,
-                    Err(err) => {
-                        error!("Failed to open device: {err:?}");
-                        continue;
-                    }
-                };
-
-                let device_name = device
-                    .get_product_string()?
-                    .unwrap_or_else(|| model.name.to_owned());
-
-                info!("Found headphone: {device_name}");
-
-                return Ok(Some(Headphone {
-                    device,
-                    model: *model,
-                    name: device_name,
-                    battery_state: 0,
-                    charging_state: None,
-                }));
+            if model.product_id == product_id && model.interface_num == interface_number {
+                match connect_device(&api, model, device) {
+                    Some(headphone) => return Ok(Some(headphone)),
+                    None => continue,
+                }
             }
         }
     }
@@ -138,6 +139,35 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     warn!("Found no connected headphones!");
 
     Ok(None)
+}
+
+fn connect_device(
+    api: &HidApi,
+    model: &HeadphoneModel,
+    device: &DeviceInfo,
+) -> Option<Headphone> {
+    let device = match device.open_device(api) {
+        Ok(d) => d,
+        Err(err) => {
+            error!("Failed to open device: {err:?}");
+            return None;
+        }
+    };
+    let device_name = device
+        .get_product_string()
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| model.name.to_owned());
+
+    info!("Found headphone: {device_name}");
+
+    return Some(Headphone {
+        device,
+        model: *model,
+        name: device_name,
+        battery_state: 0,
+        charging_state: None,
+    });
 }
 
 #[derive(Copy, Clone)]
