@@ -114,8 +114,11 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         for model in KNOWN_HEADPHONES {
             if let Some((model_usage_id, model_usage_page)) = model.usage_page {
                 if model_usage_id == usage_id && model_usage_page == usage_page {
+                    debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
                     match connect_device(&api, model, device) {
-                        Some(headphone) => return Ok(Some(headphone)),
+                        Some(headphone) => {
+                            return Ok(Some(headphone))
+                        },
                         None => continue,
                     }
                 }
