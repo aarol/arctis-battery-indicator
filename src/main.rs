@@ -10,7 +10,7 @@ fn main() {
     // Cannot really log anything if initializing logging fails
     let _ = init_file_logger();
 
-    if let Err(e) = run() {
+    if let Err(e) = run(false) {
         error!("Application stopped unexpectedly: {e:?}");
     }
 }

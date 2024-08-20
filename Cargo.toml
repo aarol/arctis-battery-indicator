@@ -1,6 +1,6 @@
 [package]
 name = "arctis-battery-indicator"
-version = "1.3.0"
+version = "1.4.0"
 edition = "2021"
 authors = ["Aaro Luomanen"]
 description = "Battery icon for the SteelSeries Arctis headset."
@@ -17,14 +17,13 @@ path = "src/bin/debug.rs"
 [dependencies]
 anyhow = "1.0.81"
 dirs = "5.0.1"
-hidapi = {version = "2.6.1"}
-log = "0.4.21"
-rust-i18n = "3.0.1"
+hidapi = "2.6.3"
+log = "0.4.22"
+rust-i18n = "3.1.1"
 simplelog = { version = "0.12.2", features = ["paris"] }
 sys-locale = "0.3.1"
-tray-icon = "0.12.0"
-winit = "0.29.15"
-winreg = "0.52.0"
+tray-icon = { version = "0.15.1"}
+winit = "0.30.5"
 
 [build-dependencies]
 winres = "0.1"

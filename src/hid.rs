@@ -116,9 +116,7 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
                 if model_usage_id == usage_id && model_usage_page == usage_page {
                     debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
                     match connect_device(&api, model, device) {
-                        Some(headphone) => {
-                            return Ok(Some(headphone))
-                        },
+                        Some(headphone) => return Ok(Some(headphone)),
                         None => continue,
                     }
                 }
@@ -144,11 +142,7 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
     Ok(None)
 }
 
-fn connect_device(
-    api: &HidApi,
-    model: &HeadphoneModel,
-    device: &DeviceInfo,
-) -> Option<Headphone> {
+fn connect_device(api: &HidApi, model: &HeadphoneModel, device: &DeviceInfo) -> Option<Headphone> {
     let device = match device.open_device(api) {
         Ok(d) => d,
         Err(err) => {
@@ -164,13 +158,13 @@ fn connect_device(
 
     info!("Found headphone: {device_name}");
 
-    return Some(Headphone {
+    Some(Headphone {
         device,
         model: *model,
         name: device_name,
         battery_state: 0,
         charging_state: None,
-    });
+    })
 }
 
 #[derive(Copy, Clone)]
