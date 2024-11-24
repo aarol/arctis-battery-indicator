@@ -1,10 +1,13 @@
 mod hid;
+mod icon;
+mod headphone_models;
 
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use hid::Headphone;
-use log::{error, info};
+use icon::IconLoader;
+use log::{error, info, trace};
 use rust_i18n::t;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
@@ -14,13 +17,14 @@ use winit::{
     application::ApplicationHandler,
     event::{StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::Theme,
 };
 
 rust_i18n::i18n!("locales", fallback = "en-US");
 
 struct AppState {
     headphone: Option<Headphone>,
-    icons: Vec<tray_icon::Icon>,
+    icon_loader: icon::IconLoader,
 
     tray_icon: TrayIcon,
     menu_logs: MenuItem,
@@ -34,7 +38,10 @@ struct AppState {
 pub fn run(is_debug: bool) -> anyhow::Result<()> {
     info!("Starting application");
 
-    rust_i18n::set_locale(&sys_locale::get_locale().unwrap_or("en-US".to_owned()));
+    let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
+    trace!("Using locale {locale}");
+    dbg!(rust_i18n::available_locales!());
+    rust_i18n::set_locale(locale);
 
     let event_loop = EventLoop::new().context("Error initializing event loop")?;
 
@@ -49,29 +56,32 @@ impl AppState {
             error!("{err:?}");
             None
         });
-        let icons = load_icons();
+
+        let mut icon_loader = IconLoader::new();
+
+        const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+        let version_str = t!("version");
+
+        let menu_version = MenuItem::new(format!("{version_str} v{VERSION}"), false, None);
 
         let menu_logs = MenuItem::new(t!("view_logs"), true, None);
-        let menu_github = MenuItem::new(t!("view_on_github"), true, None);
+        let menu_github = MenuItem::new(t!("view_updates"), true, None);
         let menu_close = MenuItem::new(t!("quit_program"), true, None);
 
         let menu = Menu::new();
-        menu.append(&menu_logs)
-            .context("Failed to add context menu item")?;
-        menu.append(&menu_github)
-            .context("Failed to add context menu item")?;
-        menu.append(&menu_close)
+
+        menu.append_items(&[&menu_version, &menu_logs, &menu_github, &menu_close])
             .context("Failed to add context menu item")?;
 
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_icon(icons[0].clone())
+            .with_icon(icon_loader.load(icon::IconImage::Battery0, true))
             .build()
             .context("Failed to create tray icon")?;
 
         Ok(Self {
             headphone,
-            icons,
+            icon_loader,
             tray_icon,
             menu_close,
             menu_github,
@@ -102,14 +112,15 @@ impl AppState {
                         let mut tooltip_text = headphone.to_string();
 
                         if self.is_debug {
-                            tooltip_text += "(Debug)"
+                            tooltip_text += " (Debug)"
                         }
 
                         info!("State has changed. New state: {headphone:?}");
                         self.tray_icon.set_tooltip(Some(tooltip_text))?;
 
                         self.tray_icon.set_icon(Some(
-                            self.icons[icon_index(event_loop, headphone.battery_state)].clone(),
+                            self.icon_loader
+                                .load(headphone.status_icon(), Self::is_dark_mode(event_loop)),
                         ))?;
                     }
                 }
@@ -120,6 +131,10 @@ impl AppState {
         }
 
         Ok(())
+    }
+
+    fn is_dark_mode(event_loop: &ActiveEventLoop) -> bool {
+        event_loop.system_theme() != Some(Theme::Light)
     }
 }
 
@@ -155,7 +170,7 @@ impl ApplicationHandler<()> for AppState {
                 id if id == self.menu_close.id() => event_loop.exit(),
 
                 id if id == self.menu_github.id() => {
-                    let url = "https://github.com/aarol/arctis-battery-indicator";
+                    let url = "https://github.com/aarol/arctis-battery-indicator/releases";
 
                     if let Err(e) = std::process::Command::new("explorer").arg(url).spawn() {
                         error!("Failed to open {url}: {e:?}");
@@ -181,26 +196,5 @@ impl ApplicationHandler<()> for AppState {
         _event: WindowEvent,
     ) {
         // Since we don't have a window attached, this will never be called
-    }
-}
-
-// Icons are in resources at IDs [10, 20, 30, 40, 50]
-// additionally, light mode icons are at [11, 21, 31, 41, 51]
-fn load_icons() -> Vec<tray_icon::Icon> {
-    (10..=50)
-        .step_by(10)
-        .chain((11..=51).step_by(10))
-        .map(|d| {
-            tray_icon::Icon::from_resource(d, None)
-                .unwrap_or_else(|err| panic!("Failed to find icon #{d}: {err}"))
-        })
-        .collect()
-}
-
-fn icon_index(event_loop: &ActiveEventLoop, state: u8) -> usize {
-    if event_loop.system_theme() == Some(winit::window::Theme::Light) {
-        state as usize + 5
-    } else {
-        state as usize
     }
 }
