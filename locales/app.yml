@@ -2,28 +2,32 @@ _version: 2
 
 battery_remaining:
   en-US: remaining
-  fi: jäljellä
+  fi-FI: jäljellä
 
 no_adapter_found:
   en-US: No headphone adapter found
-  fi: Kuulokeadapteria ei löytynyt
+  fi-FI: Kuulokeadapteria ei löytynyt
 
 view_logs:
   en-US: View logs
-  fi: Näytä lokitiedostot
+  fi-FI: Näytä lokitiedostot
 
-view_on_github:
-  en-US: View on Github
-  fi: Näytä GitHubissa
+view_updates:
+  en-US: View updates
+  fi-FI: Näytä päivitykset
 
 quit_program:
   en-US: Quit
-  fi: Lopeta
+  fi-FI: Lopeta
 
 device_charging:
   en-US: (Charging)
-  fi: (Latautuu)
+  fi-FI: (Latautuu)
 
 device_disconnected:
   en-US: (Disconnected)
-  fi: (Ei yhteyttä)
+  fi-FI: (Ei yhteyttä)
+
+version:
+  en-US: Version
+  fi-FI: Versio

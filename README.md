@@ -38,7 +38,7 @@ Your headset might be unsupported due to being a newer model. Either [create a n
 
 ### Connection status updates slowly / unreliably
 
-This sometimes happens when the SteelSeries GG application is open in the background. I haven't found a way to prevent this from happening yet.
+Often the adapter (plugged into your PC) is *really slow* at updating its information whenever something happens, like headphones disconnecting / reconnecting. I haven't found a way to work around this yet. Shutting down the SteelSeries GG app *may* help on some occasions.
 
 ## Development
 
@@ -48,15 +48,16 @@ Rust and Cargo need to be installed.
 
 * Installing the application locally: `cargo install`
 
-* Debugging the application: press `F5` in VS Code with the Rust Analyzer extension installed.
+* Debugging the application: press `F5` in VS Code with the Rust Analyzer extension and CodeLLDB installed.
 
 ## Todo
 
 * Show rough estimations for battery remaining battery life (in hours)
+* Updated icons to show charging states, etc.
 
 ## Adding a new headset
 
-Add a new entry to the bottom of `KNOWN_HEADPHONES` in [hid.rs](src/hid.rs#L142) and submit a new pull request.
+Add a new entry to the bottom of `KNOWN_HEADPHONES` in [headphone_models.rs](src/headphone_models.rs) and submit a new pull request.
 
 The parameters, such as `write_bytes` and `battery_percent_idx` can be discovered by sniffing the USB traffic with something like [WireShark](https://www.wireshark.org/) and [USBPcap](https://desowin.org/usbpcap/)
 
