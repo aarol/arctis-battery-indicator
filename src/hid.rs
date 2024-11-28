@@ -118,7 +118,7 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         let usage_page = device.usage_page();
 
         for model in KNOWN_HEADPHONES {
-            if let Some((model_usage_id, model_usage_page)) = model.usage_page {
+            if let Some((model_usage_page, model_usage_id)) = model.usage_page_id {
                 if model_usage_id == usage_id && model_usage_page == usage_page {
                     debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
                     match connect_device(&api, model, device) {
@@ -135,6 +135,7 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
 
         for model in KNOWN_HEADPHONES {
             if model.product_id == product_id && model.interface_num == interface_number {
+                debug!("Connecting to device at inteface #{:x}", model.interface_num);
                 match connect_device(&api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,
@@ -182,7 +183,8 @@ pub struct HeadphoneModel {
     pub interface_num: i32,
     pub battery_percent_idx: usize,
     pub charging_status_idx: Option<usize>,
-    pub usage_page: Option<(u16, u16)>,
+    // Usage page first, then id
+    pub usage_page_id: Option<(u16, u16)>,
 }
 
 impl std::fmt::Debug for HeadphoneModel {

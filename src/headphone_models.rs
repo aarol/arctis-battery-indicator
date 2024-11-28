@@ -10,7 +10,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 0,
         battery_percent_idx: 0,
         charging_status_idx: None,
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis 7 2017",
@@ -19,7 +19,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 5,
         battery_percent_idx: 2,
         charging_status_idx: None,
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis 7 2019",
@@ -28,7 +28,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 5,
         battery_percent_idx: 2,
         charging_status_idx: None,
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis Pro 2019",
@@ -37,7 +37,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 5,
         battery_percent_idx: 2,
         charging_status_idx: None,
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis Pro GameDac",
@@ -46,7 +46,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 5,
         battery_percent_idx: 2,
         charging_status_idx: None,
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis 9",
@@ -55,7 +55,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 3,
         charging_status_idx: Some(4),
-        usage_page: None,
+        usage_page_id: None,
     },
     HeadphoneModel {
         name: "Arctis 1 Wireless",
@@ -64,7 +64,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 3,
         charging_status_idx: Some(4),
-        usage_page: Some((0xff43, 0x202)),
+        usage_page_id: Some((0xff43, 0x202)),
     },
     HeadphoneModel {
         name: "Arctis 1 Xbox",
@@ -73,7 +73,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 3,
         charging_status_idx: Some(4),
-        usage_page: Some((0xff43, 0x202)),
+        usage_page_id: Some((0xff43, 0x202)),
     },
     HeadphoneModel {
         name: "Arctis 7X",
@@ -82,7 +82,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 3,
         charging_status_idx: Some(4),
-        usage_page: Some((0xff43, 0x202)),
+        usage_page_id: Some((0xff43, 0x202)),
     },
     HeadphoneModel {
         name: "Arctis 7 Plus",
@@ -91,7 +91,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis 7P Plus",
@@ -100,7 +100,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis 7X Plus",
@@ -109,7 +109,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis 7 Destiny Plus",
@@ -118,7 +118,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     // Nova
     HeadphoneModel {
@@ -128,7 +128,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis Nova 7X",
@@ -137,7 +137,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis Nova 7X v2",
@@ -146,7 +146,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis Nova 7P",
@@ -155,7 +155,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis Nova 7 Diablo IV",
@@ -164,7 +164,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
     HeadphoneModel {
         name: "Arctis Nova 5",
@@ -173,7 +173,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         interface_num: 3,
         battery_percent_idx: 2,
         charging_status_idx: Some(3),
-        usage_page: Some((0xffc0, 0x1)),
+        usage_page_id: Some((0xffc0, 0x1)),
     },
 ];
 
