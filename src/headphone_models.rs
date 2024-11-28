@@ -166,6 +166,15 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         charging_status_idx: Some(3),
         usage_page: Some((0xffc0, 0x1)),
     },
+    HeadphoneModel {
+        name: "Arctis Nova 5",
+        product_id: 0x2230,
+        write_bytes: [0x00, 0x10],
+        interface_num: 3,
+        battery_percent_idx: 2,
+        charging_status_idx: Some(3),
+        usage_page: Some((0xffc0, 0x1)),
+    },
 ];
 
 #[cfg(test)]
