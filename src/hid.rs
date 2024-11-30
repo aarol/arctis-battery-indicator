@@ -36,12 +36,18 @@ impl Headphone {
     }
 
     /// if return is Ok(true), state has changed
-    pub fn update(&mut self) -> hidapi::HidResult<bool> {
-        self.device.write(&self.model.write_bytes)?;
-        let mut buf = [0u8; 64];
+    pub fn update(&mut self) -> anyhow::Result<bool> {
+        self.device
+            .write(&self.model.write_bytes)
+            .with_context(|| format!("writing {:?} to device", self.model.write_bytes))?;
 
-        // timeout because we don't want to block indefinitely here
-        let n = self.device.read_timeout(&mut buf, 100)?;
+        let mut buf = [0u8; 128]; // buf is larger than any model's read_buf_size
+
+        let n = self
+        .device
+            // timeout because we don't want to block indefinitely here
+            .read_timeout(&mut buf[0..self.model.read_buf_size], 100)
+            .with_context(|| "reading from device")?;
 
         trace!("read {n}: {:?}", &buf[0..5]);
 
@@ -135,7 +141,10 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
 
         for model in KNOWN_HEADPHONES {
             if model.product_id == product_id && model.interface_num == interface_number {
-                debug!("Connecting to device at inteface #{:x}", model.interface_num);
+                debug!(
+                    "Connecting to device at inteface #{:x}",
+                    model.interface_num
+                );
                 match connect_device(&api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,
@@ -150,6 +159,10 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
 }
 
 fn connect_device(api: &HidApi, model: &HeadphoneModel, device: &DeviceInfo) -> Option<Headphone> {
+    debug!(
+        "Connecting to device at {}",
+        device.path().to_string_lossy()
+    );
     let device = match device.open_device(api) {
         Ok(d) => d,
         Err(err) => {
@@ -183,8 +196,10 @@ pub struct HeadphoneModel {
     pub interface_num: i32,
     pub battery_percent_idx: usize,
     pub charging_status_idx: Option<usize>,
-    // Usage page first, then id
+    /// Usage page first, then id
     pub usage_page_id: Option<(u16, u16)>,
+    /// Size of buffer to send when reading battery status
+    pub read_buf_size: usize,
 }
 
 impl std::fmt::Debug for HeadphoneModel {

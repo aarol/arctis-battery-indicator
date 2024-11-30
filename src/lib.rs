@@ -1,6 +1,6 @@
+mod headphone_models;
 mod hid;
 mod icon;
-mod headphone_models;
 
 use std::time::{Duration, Instant};
 
@@ -22,6 +22,8 @@ use winit::{
 
 rust_i18n::i18n!("locales", fallback = "en-US");
 
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 struct AppState {
     headphone: Option<Headphone>,
     icon_loader: icon::IconLoader,
@@ -37,6 +39,7 @@ struct AppState {
 
 pub fn run(is_debug: bool) -> anyhow::Result<()> {
     info!("Starting application");
+    info!("Version {VERSION}");
 
     let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
     trace!("Using locale {locale}");
@@ -59,7 +62,6 @@ impl AppState {
 
         let mut icon_loader = IconLoader::new();
 
-        const VERSION: &'static str = env!("CARGO_PKG_VERSION");
         let version_str = t!("version");
 
         let menu_version = MenuItem::new(format!("{version_str} v{VERSION}"), false, None);
