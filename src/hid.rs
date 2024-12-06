@@ -44,12 +44,12 @@ impl Headphone {
         let mut buf = [0u8; 128]; // buf is larger than any model's read_buf_size
 
         let n = self
-        .device
+            .device
             // timeout because we don't want to block indefinitely here
             .read_timeout(&mut buf[0..self.model.read_buf_size], 100)
             .with_context(|| "reading from device")?;
 
-        trace!("read {n}: {:?}", &buf[0..5]);
+        trace!("read {n}: {:?}", &buf[0..self.model.read_buf_size]);
 
         if n == 0 || buf[0] == 0 || !self.model.write_bytes.contains(&buf[0]) {
             trace!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
