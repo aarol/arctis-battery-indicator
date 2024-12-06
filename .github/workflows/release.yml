@@ -25,4 +25,5 @@ jobs:
             arctis-battery-indicator-${{github.ref_name}}.zip
 
           generate_release_notes: true
+          draft: true
           name: Release ${{github.ref_name}}
