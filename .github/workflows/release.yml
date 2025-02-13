@@ -3,6 +3,11 @@ on:
   push:
     tags: "v*"
 
+permissions:
+  id-token: write
+  attestations: write
+  contents: read    
+
 jobs:
   release:
     runs-on: windows-latest
@@ -18,6 +23,11 @@ jobs:
 
       - run: Compress-Archive -Path *.exe,Install.ps1 -DestinationPath arctis-battery-indicator-${{github.ref_name}}.zip
         shell: powershell
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@897ed5eab6ed058a474202017ada7f40bfa52940 # v1.0.0
+        with:
+          subject-path: "arctis-battery-indicator-${{github.ref_name}}.zip"
 
       - uses: softprops/action-gh-release@v2
         with:
