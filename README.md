@@ -53,7 +53,7 @@ Rust and Cargo need to be installed.
 ## Todo
 
 * Updated icons to show charging states, etc.
-* Add better installation experience
+* Add better installation experience.
 
 ## Adding a new headset
 
