@@ -52,8 +52,8 @@ Rust and Cargo need to be installed.
 
 ## Todo
 
-* Show rough estimations for battery remaining battery life (in hours)
 * Updated icons to show charging states, etc.
+* Add better installation experience
 
 ## Adding a new headset
 
