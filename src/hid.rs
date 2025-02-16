@@ -3,7 +3,14 @@ use hidapi::{DeviceInfo, HidApi, HidDevice};
 use log::{debug, error, info, trace, warn};
 use rust_i18n::t;
 
-use crate::{headphone_models::KNOWN_HEADPHONES, icon::IconImage};
+use crate::headphone_models::KNOWN_HEADPHONES;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChargingState {
+    Disconnected = 0,
+    Charging = 1,
+    Discharging = 3,
+}
 
 #[derive(Debug)]
 pub struct Headphone {
@@ -15,7 +22,7 @@ pub struct Headphone {
     /// - 0: not connected
     /// - 1: charging
     /// - 3: discharging
-    charging_state: Option<u8>,
+    pub charging_state: Option<ChargingState>,
 }
 
 impl Headphone {
@@ -25,14 +32,10 @@ impl Headphone {
 
     pub fn status_text(&self) -> Option<String> {
         self.charging_state.map(|state| match state {
-            1 => t!("device_charging").into(),
-            3 => "".into(),
-            _ => t!("device_disconnected").into(),
+            ChargingState::Charging => t!("device_charging").into(),
+            ChargingState::Discharging => "".into(),
+            ChargingState::Disconnected => t!("device_disconnected").into(),
         })
-    }
-
-    pub fn status_icon(&self) -> IconImage {
-        IconImage::from_state(self.battery_state, self.charging_state)
     }
 
     /// if return is Ok(true), state has changed
@@ -77,10 +80,14 @@ impl Headphone {
         if let Some(idx) = self.model.charging_status_idx {
             let charging_state = buf[idx];
 
-            if charging_state < 4 {
-                self.charging_state = Some(charging_state);
-            } else {
-                debug!("Returned charge state overflows: {}; ignoring", buf[idx])
+            self.charging_state = match charging_state {
+                0 => Some(ChargingState::Disconnected),
+                1 => Some(ChargingState::Charging),
+                3 => Some(ChargingState::Discharging),
+                _ => {
+                    debug!("Returned charge state overflows: {}; ignoring", buf[idx]);
+                    None
+                }
             }
         }
 

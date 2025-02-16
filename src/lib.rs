@@ -1,12 +1,10 @@
 mod headphone_models;
 mod hid;
-mod icon;
 
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use hid::Headphone;
-use icon::IconLoader;
+use hid::{ChargingState, Headphone};
 use log::{error, info, trace};
 use rust_i18n::t;
 use tray_icon::{
@@ -26,7 +24,6 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 struct AppState {
     headphone: Option<Headphone>,
-    icon_loader: icon::IconLoader,
 
     tray_icon: TrayIcon,
     menu_logs: MenuItem,
@@ -60,8 +57,6 @@ impl AppState {
             None
         });
 
-        let mut icon_loader = IconLoader::new();
-
         let version_str = t!("version");
 
         let menu_version = MenuItem::new(format!("{version_str} v{VERSION}"), false, None);
@@ -77,13 +72,11 @@ impl AppState {
 
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_icon(icon_loader.load(icon::IconImage::Battery0, true))
             .build()
             .context("Failed to create tray icon")?;
 
         Ok(Self {
             headphone,
-            icon_loader,
             tray_icon,
             menu_close,
             menu_github,
@@ -120,10 +113,14 @@ impl AppState {
                         info!("State has changed. New state: {headphone:?}");
                         self.tray_icon.set_tooltip(Some(tooltip_text))?;
 
-                        self.tray_icon.set_icon(Some(
-                            self.icon_loader
-                                .load(headphone.status_icon(), Self::is_dark_mode(event_loop)),
-                        ))?;
+                        match Self::load_icon(
+                            event_loop.system_theme().unwrap_or(Theme::Dark),
+                            headphone.battery_state,
+                            headphone.charging_state,
+                        ) {
+                            Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
+                            Err(err) => error!("Failed to load icon: {err:?}"),
+                        }
                     }
                 }
             },
@@ -135,8 +132,22 @@ impl AppState {
         Ok(())
     }
 
-    fn is_dark_mode(event_loop: &ActiveEventLoop) -> bool {
-        event_loop.system_theme() != Some(Theme::Light)
+    fn load_icon(
+        theme: winit::window::Theme,
+        battery_state: u8,
+        charging_state: Option<ChargingState>,
+    ) -> anyhow::Result<tray_icon::Icon> {
+        let offset = match theme {
+            Theme::Light => 1,
+            Theme::Dark => 0,
+        };
+        let res_id = if charging_state == Some(ChargingState::Disconnected) {
+            10 + offset as u16
+        } else {
+            ((battery_state + 1) * 10 + offset) as u16
+        };
+        tray_icon::Icon::from_resource(res_id, None)
+            .with_context(|| format!("loading icon from resource {res_id}"))
     }
 }
 
@@ -161,7 +172,7 @@ impl ApplicationHandler<()> for AppState {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         // This will be called at least every second
-        if self.last_update.elapsed() > Duration::from_millis(500) {
+        if self.last_update.elapsed() > Duration::from_millis(1000) {
             if let Err(e) = self.update(event_loop) {
                 error!("Failed to update status: {e:?}");
             };
@@ -199,4 +210,20 @@ impl ApplicationHandler<()> for AppState {
     ) {
         // Since we don't have a window attached, this will never be called
     }
+}
+
+#[test]
+fn load_all_icons() {
+    for i in 0..4 {
+        let _ = AppState::load_icon(Theme::Dark, i, Some(ChargingState::Discharging));
+    }
+    for i in 0..4 {
+        let _ = AppState::load_icon(Theme::Light, i, Some(ChargingState::Discharging));
+    }
+}
+
+#[test]
+#[should_panic]
+fn panic_on_invalid_icon() {
+    let _ = AppState::load_icon(Theme::Dark, 5, Some(ChargingState::Discharging));
 }

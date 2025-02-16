@@ -1,6 +1,6 @@
 [package]
 name = "arctis-battery-indicator"
-version = "1.5.4"
+version = "1.6.0"
 edition = "2021"
 authors = ["Aaro Luomanen"]
 description = "Battery icon for the SteelSeries Arctis headset."
@@ -25,6 +25,9 @@ simplelog = { version = "0.12.2", features = ["paris"] }
 sys-locale = "0.3.2"
 tray-icon = "0.19.2"
 winit = "0.30.5"
+
+[build-dependencies]
+winres = "0.1"
 
 [profile.release]
 opt-level = "z"
