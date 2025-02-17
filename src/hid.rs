@@ -26,8 +26,15 @@ pub struct Headphone {
 }
 
 impl Headphone {
+    /// Maps to an int between 0 and 100
     pub fn battery_percentage(&self) -> i32 {
-        ((self.battery_state as f32 / 4.0) * 100.0) as i32
+
+        let x = self.battery_state;
+        let (model_min, model_max) = self.model.battery_range;
+
+        let pct = (x-model_min) as f32 / (model_max-model_min) as f32;
+        dbg!(model_max);
+        (pct * 100.0) as i32
     }
 
     pub fn status_text(&self) -> Option<String> {
@@ -68,11 +75,14 @@ impl Headphone {
 
         let battery_state = buf[self.model.battery_percent_idx];
 
-        if battery_state <= 4 {
+        // check if battery state is within correct range
+        let (battery_min, battery_max) = self.model.battery_range;
+        if battery_state >= battery_min && battery_state <= battery_max {
             self.battery_state = battery_state;
         } else {
+            // otherwise the data might be garbage
             debug!(
-                "Returned battery state overflows: {}; ignoring",
+                "Returned battery state is invalid: {:x}; ignoring",
                 battery_state
             );
         }
@@ -85,7 +95,7 @@ impl Headphone {
                 1 => Some(ChargingState::Charging),
                 3 => Some(ChargingState::Discharging),
                 _ => {
-                    debug!("Returned charge state overflows: {}; ignoring", buf[idx]);
+                    debug!("Returned charge state is invalid: {}; ignoring", buf[idx]);
                     None
                 }
             }
@@ -126,13 +136,15 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         .context("Failed to scan devices")?;
 
     for device in api.device_list() {
+        let product_id = device.product_id();
+        let interface_number = device.interface_number();
         // first, try using usage_id and usage_page
         let usage_id = device.usage();
         let usage_page = device.usage_page();
 
         for model in KNOWN_HEADPHONES {
             if let Some((model_usage_page, model_usage_id)) = model.usage_page_id {
-                if model_usage_id == usage_id && model_usage_page == usage_page {
+                if product_id == model.product_id && model_usage_id == usage_id && model_usage_page == usage_page {
                     debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
                     match connect_device(&api, model, device) {
                         Some(headphone) => return Ok(Some(headphone)),
@@ -143,8 +155,6 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         }
 
         // then, try to connect with p_id and interface number
-        let product_id = device.product_id();
-        let interface_number = device.interface_number();
 
         for model in KNOWN_HEADPHONES {
             if model.product_id == product_id && model.interface_num == interface_number {
@@ -207,6 +217,7 @@ pub struct HeadphoneModel {
     pub usage_page_id: Option<(u16, u16)>,
     /// Size of buffer to send when reading battery status
     pub read_buf_size: usize,
+    pub battery_range: (u8,u8),
 }
 
 impl std::fmt::Debug for HeadphoneModel {

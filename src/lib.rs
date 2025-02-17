@@ -70,8 +70,12 @@ impl AppState {
         menu.append_items(&[&menu_version, &menu_logs, &menu_github, &menu_close])
             .context("Failed to add context menu item")?;
 
+        let icon = Self::load_icon(Theme::Dark, 0, Some(ChargingState::Disconnected))
+            .context("Failed to load icon #10")?;
+
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
+            .with_icon(icon)
             .build()
             .context("Failed to create tray icon")?;
 
