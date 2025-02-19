@@ -142,8 +142,13 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         // first, try using usage_id and usage_page
         for model in KNOWN_HEADPHONES {
             if let Some((model_usage_page, model_usage_id)) = model.usage_page_id {
+                let same_interface_num = match model.interface_num {
+                    Some(n) => n == interface_number,
+                    None => true,
+                };
+
                 if product_id == model.product_id
-                    && interface_number == model.interface_num
+                    && same_interface_num
                     && model_usage_id == usage_id
                     && model_usage_page == usage_page
                 {
@@ -159,9 +164,14 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         // then, try to connect with p_id and interface number
 
         for model in KNOWN_HEADPHONES {
-            if model.product_id == product_id && model.interface_num == interface_number {
+            let same_interface_num = match model.interface_num {
+                Some(n) => n == interface_number,
+                None => true,
+            };
+
+            if model.product_id == product_id && same_interface_num {
                 debug!(
-                    "Connecting to device at inteface #{:x}",
+                    "Connecting to device at inteface {:?}",
                     model.interface_num
                 );
                 match connect_device(&api, model, device) {
@@ -213,7 +223,7 @@ pub struct HeadphoneModel {
     pub product_id: u16,
     /// Magic bytes that make the device output battery information
     pub write_bytes: [u8; 2],
-    pub interface_num: i32,
+    pub interface_num: Option<i32>,
     pub battery_percent_idx: usize,
     pub charging_status_idx: Option<usize>,
     /// Usage page first, then id
