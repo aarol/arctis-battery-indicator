@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use hid::{ChargingState, Headphone};
-use log::{error, info, trace};
+use log::{debug, error, info};
 use rust_i18n::t;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
