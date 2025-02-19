@@ -32,7 +32,6 @@ impl Headphone {
         let (model_min, model_max) = self.model.battery_range;
 
         let pct = (x - model_min) as f32 / (model_max - model_min) as f32;
-        dbg!(model_max);
         (pct * 100.0) as i32
     }
 

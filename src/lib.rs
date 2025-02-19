@@ -38,11 +38,11 @@ pub fn run(is_debug: bool) -> anyhow::Result<()> {
     info!("Starting application");
     info!("Version {VERSION}");
 
+    debug!("Available locales: {:?}", rust_i18n::available_locales!());
     let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
-    trace!("Using locale {locale}");
-    dbg!(rust_i18n::available_locales!());
+    info!("Using locale {locale}");
     rust_i18n::set_locale(locale);
-
+    
     let event_loop = EventLoop::new().context("Error initializing event loop")?;
 
     let mut app = AppState::init(is_debug)?;
@@ -213,6 +213,10 @@ impl ApplicationHandler<()> for AppState {
         _event: WindowEvent,
     ) {
         // Since we don't have a window attached, this will never be called
+    }
+
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        info!("Exiting application..");
     }
 }
 
