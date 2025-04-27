@@ -44,7 +44,13 @@ impl Headphone {
     }
 
     /// if return is Ok(true), state has changed
-    pub fn update(&mut self) -> anyhow::Result<bool> {
+    pub fn update(&mut self, hidapi: &HidApi) -> anyhow::Result<bool> {
+        // Reconnect for every update
+        // This may seem very wasteful, but for some reason
+        // not reconnecting delays the information about changing state
+        // for a significant time.
+        self.device = hidapi.open_path(&self.path)?;
+
         self.device
             .write(&self.model.write_bytes)
             .with_context(|| format!("writing {:?} to device", self.model.write_bytes))?;
