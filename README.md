@@ -57,8 +57,10 @@ Rust and Cargo need to be installed.
 
 ## Adding a new headset
 
-Add a new entry to the bottom of `KNOWN_HEADPHONES` in [headphone_models.rs](src/headphone_models.rs) and submit a new pull request.
+I have a post on my website explaining that explains how to do this: <https://aarol.dev/posts/arctis-hid>
+
+New configurations can be tested by using a `config.toml` file. In this repository, there is an a file, [example.config.toml](./example.config.toml) which can be copied as `config.toml` to a file next to `arctis-battery-indicator.exe` and other files. When starting the program again, it will only try to find a headphone matching the configuration file. It's recommended to use the `arctis-battery-indicator-debug.exe` to test this.
+
+If you have a working configuration file, you should create a [new issue](https://github.com/aarol/arctis-battery-indicator/issues/new) with the file contents, so that I can add it to the list of known headphones.
 
 The parameters, such as `write_bytes` and `battery_percent_idx` can be discovered by sniffing the USB traffic with something like [WireShark](https://www.wireshark.org/) and [USBPcap](https://desowin.org/usbpcap/)
-
-I have a post on my website explaining how to do this: <https://aarol.dev/posts/arctis-hid>

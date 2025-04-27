@@ -1,9 +1,9 @@
+use std::{ffi::CStr, rc::Rc};
+
 use anyhow::Context;
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use log::{debug, error, info, trace, warn};
 use rust_i18n::t;
-
-use crate::headphone_models::KNOWN_HEADPHONES;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChargingState {
@@ -15,6 +15,7 @@ pub enum ChargingState {
 #[derive(Debug)]
 pub struct Headphone {
     device: HidDevice,
+    path: Rc<CStr>,
     model: HeadphoneModel,
     name: String,
     /// percentage in range [0,4]
@@ -30,7 +31,6 @@ impl Headphone {
     pub fn battery_percentage(&self) -> i32 {
         let x = self.battery_state;
         let (model_min, model_max) = self.model.battery_range;
-
         let pct = (x - model_min) as f32 / (model_max - model_min) as f32;
         (pct * 100.0) as i32
     }
@@ -122,10 +122,11 @@ impl std::fmt::Display for Headphone {
 }
 
 /// Returns the first matching device
-pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
+pub fn find_headphone(
+    models: &Vec<HeadphoneModel>,
+    api: &mut HidApi,
+) -> anyhow::Result<Option<Headphone>> {
     info!("Searching for connected headphones...");
-
-    let mut api = hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
 
     // Filter by SteelSeries HID vendor ID, no filter (0) for product ID
     //
@@ -140,20 +141,14 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         let usage_page = device.usage_page();
 
         // first, try using usage_id and usage_page
-        for model in KNOWN_HEADPHONES {
-            if let Some((model_usage_page, model_usage_id)) = model.usage_page_id {
-                let same_interface_num = match model.interface_num {
-                    Some(n) => n == interface_number,
-                    None => true,
-                };
-
+        for model in models.iter() {
+            if let Some((model_usage_page, model_usage_id)) = model.usage_page_and_id {
                 if product_id == model.product_id
-                    && same_interface_num
-                    && model_usage_id == usage_id
-                    && model_usage_page == usage_page
+                    && usage_id == model_usage_id
+                    && usage_page == model_usage_page
                 {
                     debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
-                    match connect_device(&api, model, device) {
+                    match connect_device(&api, &model, device) {
                         Some(headphone) => return Ok(Some(headphone)),
                         None => continue,
                     }
@@ -162,18 +157,14 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
         }
 
         // then, try to connect with p_id and interface number
-
-        for model in KNOWN_HEADPHONES {
+        for model in models.iter() {
             let same_interface_num = match model.interface_num {
                 Some(n) => n == interface_number,
                 None => true,
             };
 
             if model.product_id == product_id && same_interface_num {
-                debug!(
-                    "Connecting to device at inteface {:?}",
-                    model.interface_num
-                );
+                debug!("Connecting to device at inteface {:?}", model.interface_num);
                 match connect_device(&api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,
@@ -188,10 +179,9 @@ pub fn find_headphone() -> anyhow::Result<Option<Headphone>> {
 }
 
 fn connect_device(api: &HidApi, model: &HeadphoneModel, device: &DeviceInfo) -> Option<Headphone> {
-    debug!(
-        "Connecting to device at {}",
-        device.path().to_string_lossy()
-    );
+    let path = device.path();
+    debug!("Connecting to device at {}", path.to_string_lossy());
+
     let device = match device.open_device(api) {
         Ok(d) => d,
         Err(err) => {
@@ -199,11 +189,8 @@ fn connect_device(api: &HidApi, model: &HeadphoneModel, device: &DeviceInfo) -> 
             return None;
         }
     };
-    let device_name = device
-        .get_product_string()
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| model.name.to_owned());
+
+    let device_name = model.name.to_owned();
 
     info!("Found headphone: {device_name}");
     debug!("Model: {model:?}");
@@ -211,6 +198,7 @@ fn connect_device(api: &HidApi, model: &HeadphoneModel, device: &DeviceInfo) -> 
     Some(Headphone {
         device,
         model: *model,
+        path: Rc::from(path),
         name: device_name,
         battery_state: 0,
         charging_state: None,
@@ -227,7 +215,7 @@ pub struct HeadphoneModel {
     pub battery_percent_idx: usize,
     pub charging_status_idx: Option<usize>,
     /// Usage page first, then id
-    pub usage_page_id: Option<(u16, u16)>,
+    pub usage_page_and_id: Option<(u16, u16)>,
     /// Size of buffer to send when reading battery status
     pub read_buf_size: usize,
     pub battery_range: (u8, u8),

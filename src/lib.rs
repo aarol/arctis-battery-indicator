@@ -1,10 +1,14 @@
+mod config_file;
 mod headphone_models;
 mod hid;
 
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use hid::{ChargingState, Headphone};
+use config_file::{config_file_exists, ConfigFile};
+use headphone_models::KNOWN_HEADPHONES;
+use hid::{ChargingState, Headphone, HeadphoneModel};
+use hidapi::HidApi;
 use log::{debug, error, info};
 use rust_i18n::t;
 use tray_icon::{
@@ -23,6 +27,8 @@ rust_i18n::i18n!("locales", fallback = "en-US");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 struct AppState {
+    hidapi: HidApi,
+    config: Option<ConfigFile>,
     headphone: Option<Headphone>,
 
     tray_icon: TrayIcon,
@@ -42,20 +48,48 @@ pub fn run(is_debug: bool) -> anyhow::Result<()> {
     let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
     info!("Using locale {locale}");
     rust_i18n::set_locale(locale);
-    
+
+    let config = if config_file_exists() {
+        match config_file::load_config() {
+            Ok(config) => Some(config),
+            Err(err) => {
+                error!("failed to load configuration file: {err:?}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     let event_loop = EventLoop::new().context("Error initializing event loop")?;
 
-    let mut app = AppState::init(is_debug)?;
+    let mut app = AppState::init(is_debug, config)?;
 
     Ok(event_loop.run_app(&mut app)?)
 }
 
 impl AppState {
-    pub fn init(is_debug: bool) -> anyhow::Result<Self> {
-        let headphone = hid::find_headphone().unwrap_or_else(|err| {
-            error!("{err:?}");
-            None
-        });
+    pub fn init(is_debug: bool, config: Option<ConfigFile>) -> anyhow::Result<Self> {
+        let mut hidapi =
+            hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
+
+        let headphone = match &config {
+            Some(config) => {
+                info!("Found custom config: trying to find headphones matching it...");
+                let models = vec![HeadphoneModel::from(config.clone())];
+                hid::find_headphone(&models, &mut hidapi).unwrap_or_else(|err| {
+                    error!("Failed to connect with custom config: {err:?}");
+                    None
+                })
+            }
+            None => {
+                let models = Vec::from(KNOWN_HEADPHONES);
+                hid::find_headphone(&models, &mut hidapi).unwrap_or_else(|err| {
+                    error!("{err:?}");
+                    None
+                })
+            }
+        };
 
         let version_str = t!("version");
 
@@ -81,10 +115,12 @@ impl AppState {
 
         Ok(Self {
             headphone,
+            config,
             tray_icon,
             menu_close,
             menu_github,
             menu_logs,
+            hidapi,
             last_update: Instant::now(),
             is_debug,
         })
@@ -92,14 +128,27 @@ impl AppState {
 
     fn update(&mut self, event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         if self.headphone.is_none() {
-            self.headphone = hid::find_headphone().unwrap_or_else(|err| {
-                error!("{err:?}");
-                None
-            });
+            self.headphone = match &self.config {
+                Some(config) => {
+                    info!("Found custom config: trying to find headphones matching it...");
+                    let models = vec![HeadphoneModel::from(config.clone())];
+                    hid::find_headphone(&models, &mut self.hidapi).unwrap_or_else(|err| {
+                        error!("Failed to connect with custom config: {err:?}");
+                        None
+                    })
+                }
+                None => {
+                    let models = Vec::from(KNOWN_HEADPHONES);
+                    hid::find_headphone(&models, &mut self.hidapi).unwrap_or_else(|err| {
+                        error!("{err:?}");
+                        None
+                    })
+                }
+            };
         }
 
         match self.headphone {
-            Some(ref mut headphone) => match headphone.update() {
+            Some(ref mut headphone) => match headphone.update(&self.hidapi) {
                 Err(err) => {
                     // an error will only occur when reading/writing to the device fails
                     // in that situation, the best course of action is to try to reconnect

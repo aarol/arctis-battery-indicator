@@ -1,0 +1,9 @@
+name = "Arctis Nova 7"
+product_id = 0x2202
+interface_num = 3                 # optional
+write_bytes = [0x00, 0xb0]        # length is two
+read_buf_size = 8
+battery_percent_idx = 2
+battery_range = [0x00, 0x04]
+charging_status_idx = 3           # optional
+usage_page_and_id = [0xffc0, 0x1] # optional
