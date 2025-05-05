@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    tags: "v*"
+    tags: ["v*"]
 
 permissions:
   id-token: write
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - uses: actions/checkout@v4
@@ -19,20 +19,18 @@ jobs:
 
       - run: cargo build --release
 
-      - run: mv target/release/*.exe .
-
-      - run: Compress-Archive -Path *.exe,Install.ps1 -DestinationPath arctis-battery-indicator-${{github.ref_name}}.zip
-        shell: powershell
+      - run: ISCC ./installer.iss
+            # result in ./Output/ArctisBatteryIndicatorSetup.exe
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "arctis-battery-indicator-${{github.ref_name}}.zip"
+          subject-path: "Output/ArctisBatteryIndicatorSetup.exe"
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            arctis-battery-indicator-${{github.ref_name}}.zip
+            Output/ArctisBatteryIndicatorSetup.exe
 
           generate_release_notes: true
           draft: true
