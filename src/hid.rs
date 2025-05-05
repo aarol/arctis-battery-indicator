@@ -170,7 +170,7 @@ pub fn find_headphone(
             };
 
             if model.product_id == product_id && same_interface_num {
-                debug!("Connecting to device at inteface {:?}", model.interface_num);
+                debug!("Connecting to device at inteface {}", model.interface_num.unwrap_or(0));
                 match connect_device(&api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,

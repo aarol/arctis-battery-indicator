@@ -59,6 +59,14 @@ Rust and Cargo need to be installed.
 
 I have a post on my website explaining that explains how to do this: <https://aarol.dev/posts/arctis-hid>
 
+If you have found the necessary data, you can try it out by creating a custom config file:
+
+1. Install version 2.0.0 or greater of Arctis Battery Indicator
+2. Navigate to the program data folder (that would be `%localAppData%\Programs\ArctisBatteryIndicator` by default)
+3. Rename the `example.config.toml` file to `config.toml`
+4. Update the data in the `config.toml` file (most headphones have similar configurations, you can look at [here](./src/headphone_models.rs) for inspiration)
+5. Launch the `arctis-battery-indicator-debug.exe` in the same directory to test your changes. It should say "Found custom config" in the logs.
+
 New configurations can be tested by using a `config.toml` file. In this repository, there is an a file, [example.config.toml](./example.config.toml) which can be copied as `config.toml` to a file next to `arctis-battery-indicator.exe` and other files. When starting the program again, it will only try to find a headphone matching the configuration file. It's recommended to use the `arctis-battery-indicator-debug.exe` to test this.
 
 If you have a working configuration file, you should create a [new issue](https://github.com/aarol/arctis-battery-indicator/issues/new) with the file contents, so that I can add it to the list of known headphones.

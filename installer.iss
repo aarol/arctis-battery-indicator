@@ -29,8 +29,8 @@ RestartApplications=no
 SetupMutex=Arctis-Indicator-Mutex
 
 [Files]
-Source: "target/release/arctis-battery-indicator.exe"; DestDir: "{app}"
-Source: "target/release/arctis-battery-indicator-debug.exe"; DestDir: "{app}"
+Source: "target/release/arctis-battery-indicator.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "target/release/arctis-battery-indicator-debug.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "example.config.toml"; DestDir: "{app}"
 
 [Icons]
@@ -52,9 +52,5 @@ Filename: "taskkill"; Parameters: "/im ""arctis-battery-indicator-debug.exe"" /f
 Filename: "{cmd}"; Parameters: "/c timeout 1"; Flags: runhidden; RunOnceId: "Wait"
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{%LOCALAPPDATA}\ArctisBatteryIndicator"
-Type: filesandordirs; Name: "{%LOCALAPPDATA}\Programs\ArctisBatteryIndicator"
-
-[InstallDelete]
-Type: filesandordirs; Name: "{%LOCALAPPDATA}\ArctisBatteryIndicator"
-Type: filesandordirs; Name: "{%LOCALAPPDATA}\Programs\ArctisBatteryIndicator"
+Type: files; Name: "{app}\arctis-battery-indicator.log"
+Type: dirifempty; Name: "{app}"
