@@ -10,26 +10,21 @@ fn main() {
     // Cannot really log anything if initializing logging fails
     let _ = init_file_logger();
 
-    if let Err(e) = run(false) {
+    if let Err(e) = run() {
         error!("Application stopped unexpectedly: {e:?}");
     }
 }
 
 pub fn init_file_logger() -> anyhow::Result<()> {
-    match dirs::config_local_dir() {
-        None => {
-            anyhow::bail!("Failed to locate APPDATA_LOCAL dir")
+    match std::env::current_dir() {
+        Err(err) => {
+            anyhow::bail!("Failed to get current directory: {err}");
         }
-        Some(appdata_local) => {
-            let log_dir = appdata_local.join("ArctisBatteryIndicator");
-            std::fs::DirBuilder::new()
-                .recursive(true)
-                .create(&log_dir)?;
-
+        Ok(curr_dir) => {
             let log_file = File::options()
                 .append(true)
                 .create(true)
-                .open(log_dir.join("arctisBatteryIndicator.log"))?;
+                .open(curr_dir.join("arctis-battery-indicator.log"))?;
 
             WriteLogger::init(
                 log::LevelFilter::Info,

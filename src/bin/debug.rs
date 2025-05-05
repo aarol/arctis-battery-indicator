@@ -11,7 +11,7 @@ fn main() {
     )
     .unwrap();
 
-    if let Err(e) = run(true) {
+    if let Err(e) = run() {
         error!("Application stopped unexpectedly: {e:?}");
     }
 }

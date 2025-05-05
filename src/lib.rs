@@ -37,10 +37,9 @@ struct AppState {
     menu_close: MenuItem,
 
     last_update: Instant,
-    is_debug: bool,
 }
 
-pub fn run(is_debug: bool) -> anyhow::Result<()> {
+pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
     info!("Version {VERSION}");
 
@@ -63,13 +62,13 @@ pub fn run(is_debug: bool) -> anyhow::Result<()> {
 
     let event_loop = EventLoop::new().context("Error initializing event loop")?;
 
-    let mut app = AppState::init(is_debug, config)?;
+    let mut app = AppState::init(config)?;
 
     Ok(event_loop.run_app(&mut app)?)
 }
 
 impl AppState {
-    pub fn init(is_debug: bool, config: Option<ConfigFile>) -> anyhow::Result<Self> {
+    pub fn init(config: Option<ConfigFile>) -> anyhow::Result<Self> {
         let mut hidapi =
             hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
 
@@ -92,7 +91,6 @@ impl AppState {
         };
 
         let version_str = t!("version");
-
         let menu_version = MenuItem::new(format!("{version_str} v{VERSION}"), false, None);
 
         let menu_logs = MenuItem::new(t!("view_logs"), true, None);
@@ -122,7 +120,6 @@ impl AppState {
             menu_logs,
             hidapi,
             last_update: Instant::now(),
-            is_debug,
         })
     }
 
@@ -157,10 +154,12 @@ impl AppState {
                 }
                 Ok(changed) => {
                     if changed {
+                        #[allow(unused_mut)]
                         let mut tooltip_text = headphone.to_string();
 
-                        if self.is_debug {
-                            tooltip_text += " (Debug)"
+                        #[cfg(debug_assertions)]
+                        {
+                            tooltip_text += " (Debug)";
                         }
 
                         info!("State has changed. New state: {headphone:?}");
@@ -243,11 +242,9 @@ impl ApplicationHandler<()> for AppState {
                     }
                 }
                 id if id == self.menu_logs.id() => {
-                    if let Some(local_appdata) = dirs::data_local_dir() {
-                        let path = local_appdata.join("ArctisBatteryIndicator");
-
-                        if let Err(e) = std::process::Command::new("explorer").arg(&path).spawn() {
-                            error!("Failed to open path {path:?}: {e:?}");
+                    if let Ok(dir) = std::env::current_dir() {
+                        if let Err(e) = std::process::Command::new("explorer").arg(&dir).spawn() {
+                            error!("Failed to open path {dir:?}: {e:?}");
                         }
                     }
                 }
