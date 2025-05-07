@@ -234,3 +234,12 @@ impl std::fmt::Debug for HeadphoneModel {
             .finish_non_exhaustive()
     }
 }
+
+impl Headphone {
+    // ...existing methods...
+
+    /// Returns the (min, max) range of expected battery values
+    pub fn battery_range(&self) -> (u8, u8) {
+        self.model.battery_range
+    }
+}
