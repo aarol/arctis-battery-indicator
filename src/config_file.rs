@@ -12,6 +12,7 @@ pub struct ConfigFile {
     pub interface_num: Option<i32>,
     pub battery_percent_idx: usize,
     pub charging_status_idx: Option<usize>,
+    pub connected_status_idx: Option<usize>,
     /// Usage page first, then id
     pub usage_page_id: Option<(u16, u16)>,
     /// Size of buffer to send when reading battery status
@@ -31,6 +32,7 @@ impl From<ConfigFile> for HeadphoneModel {
             write_bytes: value.write_bytes,
             interface_num: value.interface_num,
             charging_status_idx: value.charging_status_idx,
+            connected_status_idx: value.connected_status_idx,
             usage_page_and_id: value.usage_page_id,
             read_buf_size: value.read_buf_size,
             battery_range: value.battery_range,
