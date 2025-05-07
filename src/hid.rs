@@ -65,10 +65,20 @@ impl Headphone {
 
         trace!("read {n}: {:?}", &buf[0..self.model.read_buf_size]);
 
-        if n == 0 || buf[0] == 0 || !self.model.write_bytes.contains(&buf[0]) {
-            trace!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
+        // explicitly run each check
+        if n == 0 {
+            debug!("No data read from device; ignoring");
             return Ok(false);
         }
+        if buf[0] == 0 {
+            debug!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
+            return Ok(false);
+        }
+        // this doesnt seem to work correctly for arctis 9 ¯\_(ツ)_/¯
+        // if !self.model.write_bytes.contains(&buf[0]) {
+        //     debug!("Read write bytes from device: {:?}; ignoring {:?}", &buf[0..5], &buf[0]);
+        //     return Ok(false);
+        // }
 
         // save old state
         let Headphone {
