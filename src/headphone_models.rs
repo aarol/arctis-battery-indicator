@@ -205,13 +205,13 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
     HeadphoneModel {
         name: "Arctis Nova 5",
         product_id: 0x2232,
-        write_bytes: [0x00, 0xB0],
+        write_bytes: [0x00, 0xb0],
         interface_num: Some(3),
-        battery_percent_idx: 0x03,
-        charging_status_idx: Some(0x04),
+        battery_percent_idx: 3,
+        charging_status_idx: Some(4),
         usage_page_and_id: Some((0xffc0, 0x1)),
-        read_buf_size: 128,
-        battery_range: (0x00, 0x04),
+        read_buf_size: 64,
+        battery_range: (0x00, 0x64),
     },
     HeadphoneModel {
         name: "Arctis Nova 5X",
