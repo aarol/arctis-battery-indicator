@@ -8,7 +8,7 @@
 AppId=88ECD258-57B9-4DDB-ABA3-67DC0289A92C
 AppName={#MyAppDisplayName}
 ; keep this up to date
-AppVersion=2.0.0
+AppVersion=2.1.0
 WizardStyle=modern
 DefaultDirName={localappdata}\Programs\ArctisBatteryIndicator
 DefaultGroupName={#MyAppDisplayName}
@@ -25,6 +25,7 @@ OutputBaseFilename="ArctisBatteryIndicatorSetup"
 PrivilegesRequired=lowest
 CloseApplications=force
 RestartApplications=no
+DirExistsWarning=no
 
 SetupMutex=Arctis-Indicator-Mutex
 
@@ -54,3 +55,25 @@ Filename: "{cmd}"; Parameters: "/c timeout 1"; Flags: runhidden; RunOnceId: "Wai
 [UninstallDelete]
 Type: files; Name: "{app}\arctis-battery-indicator.log"
 Type: dirifempty; Name: "{app}"
+
+[Code]
+function KillProcessByName(ProcessName: string): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Attempt to kill a process by name using taskkill
+  Result := Exec('taskkill.exe', '/F /IM "' + ProcessName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+// Runs after the user has pressed "install"
+// Why is it necessary to kill the previous process with taskkill instead of relying on 
+// the Windows restart manager that Inno Setup normally uses?
+// 
+// The tray-icon crate creates a new window via the win32 api, but actually doesn't
+// provide a way to react to the events sent by restart manager (WM_QUERYSESSIONEND, WM_CLOSE)
+// this means that there's currently no way to gracefully close the program, so we have to manually kill it.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  KillProcessByName('arctis-battery-indicator.exe')
+  Result := '';  // Empty string means continue installation
+end;

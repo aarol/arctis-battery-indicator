@@ -87,7 +87,7 @@ checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
 name = "arctis-battery-indicator"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "dirs",
