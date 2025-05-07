@@ -22,7 +22,7 @@ If you're experiencing crashes or other issues, you can try running the `arctis-
 
 ### Why does it only show 100%, 75%, 50%, 25% or 0%?
 
-This is limitation of the headsets themselves, as the devices only expose 5 possible battery states.
+This is limitation of the headsets themselves, as most devices only expose 5 possible battery states.
 
 ### My headset is connected, but it still shows "No headphone adapter found"
 
@@ -44,7 +44,7 @@ Rust and Cargo need to be installed.
 
 ## Adding a new headset
 
-I have a post on my website explaining that explains how to do this: <https://aarol.dev/posts/arctis-hid>
+I have a post on my website explaining that tries to explain how to do this: <https://aarol.dev/posts/arctis-hid>
 
 The parameters, such as `write_bytes` and `battery_percent_idx` can be discovered by sniffing the USB traffic with something like [WireShark](https://www.wireshark.org/) and [USBPcap](https://desowin.org/usbpcap/)
 
@@ -55,5 +55,7 @@ If you have found the necessary data, you can try it out by creating a custom co
 3. Rename the `example.config.toml` file to `config.toml`
 4. Update the data in the `config.toml` file (most headphones have similar configurations, you can look at [this file](./src/headphone_models.rs) for inspiration)
 5. Launch the `arctis-battery-indicator-debug.exe` in the same directory to test your changes. It should say "Found custom config" in the logs.
+
+Reading the [HeadsetControl wiki](https://github.com/Sapd/HeadsetControl/wiki/Development#problems) might be helpful for troubleshooting.
 
 If you have a working configuration file, you should create a [new issue](https://github.com/aarol/arctis-battery-indicator/issues/new) with the file contents, so that everyone else can benefit from it too!
