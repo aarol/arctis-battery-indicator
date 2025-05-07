@@ -28,11 +28,11 @@ pub struct Headphone {
 
 impl Headphone {
     /// Maps to an int between 0 and 100
-    pub fn battery_percentage(&self) -> i32 {
-        let x = self.battery_state;
-        let (model_min, model_max) = self.model.battery_range;
-        let pct = (x - model_min) as f32 / (model_max - model_min) as f32;
-        (pct * 100.0) as i32
+    pub fn battery_percentage(&self) -> u8 {
+        let (min, max) = self.model.battery_range;
+        let clamped = self.battery_state.clamp(min, max);
+        let normalized = (clamped - min) as f32 / ((max - min) as f32);
+        (normalized * 100.0).round() as u8
     }
 
     pub fn status_text(&self) -> Option<String> {
@@ -170,7 +170,10 @@ pub fn find_headphone(
             };
 
             if model.product_id == product_id && same_interface_num {
-                debug!("Connecting to device at inteface {}", model.interface_num.unwrap_or(0));
+                debug!(
+                    "Connecting to device at inteface {}",
+                    model.interface_num.unwrap_or(0)
+                );
                 match connect_device(&api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,
@@ -232,14 +235,5 @@ impl std::fmt::Debug for HeadphoneModel {
         f.debug_struct("HeadphoneModel")
             .field("product_id", &format!("0x{:x}", self.product_id))
             .finish_non_exhaustive()
-    }
-}
-
-impl Headphone {
-    // ...existing methods...
-
-    /// Returns the (min, max) range of expected battery values
-    pub fn battery_range(&self) -> (u8, u8) {
-        self.model.battery_range
     }
 }

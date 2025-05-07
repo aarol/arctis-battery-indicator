@@ -102,8 +102,8 @@ impl AppState {
         menu.append_items(&[&menu_version, &menu_logs, &menu_github, &menu_close])
             .context("Failed to add context menu item")?;
 
-        let icon = tray_icon::Icon::from_resource(10, None)
-        .with_context(|| "loading fallback disconnected icon")?;
+        let icon = Self::load_icon(Theme::Dark, 0, Some(ChargingState::Disconnected))
+            .context("loading fallback disconnected icon")?;
 
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
@@ -165,25 +165,13 @@ impl AppState {
                         info!("State has changed. New state: {headphone:?}");
                         self.tray_icon.set_tooltip(Some(tooltip_text))?;
 
-                        let battery_range = headphone.battery_range();
-                    let battery_state = headphone.battery_state;
+                        let battery_percent = headphone.battery_percentage();
 
-                    // Normalize the raw battery state into a usable percent
-                    let battery_percent = if battery_range.1 > battery_range.0 {
-                        let clamped = battery_state.clamp(battery_range.0, battery_range.1);
-                        let normalized = (clamped - battery_range.0) as f32
-                            / (battery_range.1 - battery_range.0) as f32;
-                        (normalized * 100.0).round() as u8
-                    } else {
-                        0
-                    };
-
-                    match Self::load_icon(
-                        event_loop.system_theme().unwrap_or(Theme::Dark),
-                        battery_percent,
-                        headphone.charging_state,
-                    ) {
-
+                        match Self::load_icon(
+                            event_loop.system_theme().unwrap_or(Theme::Dark),
+                            battery_percent,
+                            headphone.charging_state,
+                        ) {
                             Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
                             Err(err) => error!("Failed to load icon: {err:?}"),
                         }
@@ -203,25 +191,22 @@ impl AppState {
         battery_percent: u8,
         charging_state: Option<ChargingState>,
     ) -> anyhow::Result<tray_icon::Icon> {
-        let offset = match theme {
-            Theme::Light => 1,
-            Theme::Dark => 0,
-        };
-
         // Map battery_percent to discrete icon levels
         let level = match battery_percent {
-            0..=12 => 0,      // 0%
-            13..=37 => 1,     // 25%
-            38..=62 => 2,     // 50%
-            63..=87 => 3,     // 75%
-            _ => 4,           // 100%
+            0..=12 => 0,  // 0%
+            13..=37 => 1, // 25%
+            38..=62 => 2, // 50%
+            63..=87 => 3, // 75%
+            _ => 4,       // 100%
         };
 
-
+        let theme_offset: u16 = if theme == Theme::Light { 1 } else { 0 };
+        // dark mode icons are (10,20,...,50)
+        // light mode icons are (11,21,...,51)
         let res_id = if charging_state == Some(ChargingState::Disconnected) {
-            10 + offset as u16
+            10 + theme_offset // empty icon
         } else {
-            ((level + 1) * 10 + offset) as u16
+            (level + 1) * 10 + theme_offset
         };
 
         tray_icon::Icon::from_resource(res_id, None)
@@ -294,16 +279,10 @@ impl ApplicationHandler<()> for AppState {
 
 #[test]
 fn load_all_icons() {
-    for i in 0..4 {
+    for i in 0..=100 {
         let _ = AppState::load_icon(Theme::Dark, i, Some(ChargingState::Discharging));
     }
-    for i in 0..4 {
+    for i in 0..=100 {
         let _ = AppState::load_icon(Theme::Light, i, Some(ChargingState::Discharging));
     }
-}
-
-#[test]
-#[should_panic]
-fn panic_on_invalid_icon() {
-    let _ = AppState::load_icon(Theme::Dark, 5, Some(ChargingState::Discharging));
 }
