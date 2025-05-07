@@ -74,7 +74,7 @@ impl Headphone {
             debug!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
             return Ok(false);
         }
-        // this doesnt seem to work correctly for arctis 9 ¯\_(ツ)_/¯
+        // skip this check? i think its unnecessary
         // if !self.model.write_bytes.contains(&buf[0]) {
         //     debug!("Read write bytes from device: {:?}; ignoring {:?}", &buf[0..5], &buf[0]);
         //     return Ok(false);
