@@ -9,7 +9,7 @@ use rust_i18n::t;
 pub enum ChargingState {
     Disconnected = 0,
     Charging = 1,
-    Discharging = 3,
+    Connected = 3,
 }
 
 #[derive(Debug)]
@@ -20,9 +20,6 @@ pub struct Headphone {
     name: String,
     /// percentage in range [0,4]
     pub battery_state: u8,
-    /// - 0: not connected
-    /// - 1: charging
-    /// - 3: discharging
     pub charging_state: Option<ChargingState>,
 }
 
@@ -38,7 +35,7 @@ impl Headphone {
     pub fn status_text(&self) -> Option<String> {
         self.charging_state.map(|state| match state {
             ChargingState::Charging => t!("device_charging").into(),
-            ChargingState::Discharging => "".into(),
+            ChargingState::Connected => "".into(),
             ChargingState::Disconnected => t!("device_disconnected").into(),
         })
     }
@@ -63,9 +60,8 @@ impl Headphone {
             .read_timeout(&mut buf[0..self.model.read_buf_size], 100)
             .with_context(|| "reading from device")?;
 
-        trace!("read {n}: {:?}", &buf[0..self.model.read_buf_size]);
+        trace!("Read {n}: {:?}", &buf[0..self.model.read_buf_size]);
 
-        // explicitly run each check
         if n == 0 {
             debug!("No data read from device; ignoring");
             return Ok(false);
@@ -74,11 +70,14 @@ impl Headphone {
             debug!("Read invalid bytes from device: {:?}; ignoring", &buf[0..5]);
             return Ok(false);
         }
-        // skip this check? i think its unnecessary
-        // if !self.model.write_bytes.contains(&buf[0]) {
-        //     debug!("Read write bytes from device: {:?}; ignoring {:?}", &buf[0..5], &buf[0]);
-        //     return Ok(false);
-        // }
+
+        if !self.model.write_bytes.contains(&buf[0]) {
+            // just log the error and continue
+            trace!(
+                "Result did not contain report number, which should be one of {:?}",
+                &self.model.write_bytes
+            );
+        }
 
         // save old state
         let Headphone {
@@ -91,55 +90,59 @@ impl Headphone {
 
         // check if battery state is within correct range
         let (battery_min, battery_max) = self.model.battery_range;
-        if battery_state >= battery_min && battery_state <= battery_max {
+
+        if battery_min <= battery_state && battery_state <= battery_max {
             self.battery_state = battery_state;
         } else {
-            // otherwise the data might be garbage
+            // don't update battery state
             debug!(
                 "Returned battery state is invalid: {:x}; ignoring",
                 battery_state
             );
         }
 
-        if let Some(charging_state_idx) = self.model.charging_status_idx {
-            // get the charging state, if theres no connected state, this'll be used.
-            let mut device_state = buf[charging_state_idx];
+        if let Some(charging_status_idx) = self.model.charging_status_idx {
+            self.charging_state =
+                if let Some(connected_status_idx) = self.model.connected_status_idx {
+                    // if device config has a separate index for connected state
 
-            // if device config has a separate index for connected state
-            if let Some(connected_state_idx) = self.model.connected_status_idx {
-                let connected_state = buf[connected_state_idx];
-
-                // for arctis 9, this is 1 when on and 3 when off/disconnected, but maybe its different for different devices.
-                // assume 1 means on
-                if connected_state != 1 {
-                    // device isn't on, so set the state to disconnected
-                    device_state = 0; // disconnected
-                } else {
-                    // device is on, set state
-                    
-                    // all devices with separate values probably use 0 for not charging and 1 for charging, like arctis 9
-                    // maybe this has to be changed in future for other devices
-                    if buf[charging_state_idx] == 0 {
-                        device_state = 3; // not charging
-                    } else if buf[charging_state_idx] == 1 {
-                        device_state = 1; // charging
+                    let connected_state = buf[connected_status_idx];
+                    // connected_state is 1 when on and 3 when off/disconnected for Arctis 9, but might be different for other devices.
+                    if connected_state == 1 {
+                        // all devices with separate values for connected status 
+                        // probably use 0 for not charging and 1 for charging, like Arctis 9
+                        match buf[charging_status_idx] {
+                            0 => Some(ChargingState::Connected),
+                            1 => Some(ChargingState::Charging),
+                            _ => {
+                                debug!(
+                                    "Returned charge state is invalid: {:x}; ignoring",
+                                    buf[charging_status_idx],
+                                );
+                                return Ok(false)
+                            }
+                        }
                     } else {
-                        // invalid state
-                        debug!("Returned charge state is invalid: {:x}; ignoring", device_state);
-                        return Ok(false);
+                        // device isn't on, so set the state to disconnected
+                        Some(ChargingState::Disconnected)
                     }
-                }
-            }
+                } else {
+                    // Uses the same status idx for charging, connected and disconnected
+                    // this is most headphones
 
-            self.charging_state = match device_state {
-                0 => Some(ChargingState::Disconnected),
-                1 => Some(ChargingState::Charging),
-                3 => Some(ChargingState::Discharging),
-                _ => {
-                    debug!("Returned charge state is invalid: {}; ignoring", device_state);
-                    None
-                }
-            }
+                    match buf[charging_status_idx] {
+                        0 => Some(ChargingState::Disconnected),
+                        1 => Some(ChargingState::Charging),
+                        3 => Some(ChargingState::Connected),
+                        _ => {
+                            debug!(
+                                "Returned charge state is invalid: {:x}; ignoring",
+                                buf[charging_status_idx],
+                            );
+                            None
+                        }
+                    }
+                };
         }
 
         Ok(self.battery_state != old_battery || self.charging_state != old_charging)
@@ -157,7 +160,7 @@ impl std::fmt::Display for Headphone {
         )?;
 
         if let Some(status) = self.status_text() {
-            write!(f, " {status}",)?;
+            write!(f, " {status}")?;
         }
 
         Ok(())
@@ -208,7 +211,7 @@ pub fn find_headphone(
 
             if model.product_id == product_id && same_interface_num {
                 debug!(
-                    "Connecting to device at inteface {}", 
+                    "Connecting to device at inteface {}",
                     model.interface_num.unwrap_or(0)
                 );
                 match connect_device(&api, model, device) {

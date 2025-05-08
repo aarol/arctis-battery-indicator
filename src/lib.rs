@@ -280,9 +280,9 @@ impl ApplicationHandler<()> for AppState {
 #[test]
 fn load_all_icons() {
     for i in 0..=100 {
-        let _ = AppState::load_icon(Theme::Dark, i, Some(ChargingState::Discharging));
+        let _ = AppState::load_icon(Theme::Dark, i, Some(ChargingState::Connected));
     }
     for i in 0..=100 {
-        let _ = AppState::load_icon(Theme::Light, i, Some(ChargingState::Discharging));
+        let _ = AppState::load_icon(Theme::Light, i, Some(ChargingState::Connected));
     }
 }
