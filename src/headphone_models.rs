@@ -73,7 +73,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         connected_status_idx: Some(1),
         usage_page_and_id: None,
         read_buf_size: 12,
-        battery_range: (0x64, 0x9a),
+        battery_range: (0x64, 0xa5),
     },
     HeadphoneModel {
         name: "Arctis 1 Wireless",
