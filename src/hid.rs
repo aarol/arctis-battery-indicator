@@ -114,6 +114,7 @@ impl Headphone {
                         match buf[charging_status_idx] {
                             0 => Some(ChargingState::Connected),
                             1 => Some(ChargingState::Charging),
+                            2 => Some(ChargingState::Charging), // charging but fully charged
                             _ => {
                                 debug!(
                                     "Returned charge state is invalid: {:x}; ignoring",
