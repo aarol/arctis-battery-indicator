@@ -6,4 +6,5 @@ read_buf_size = 8
 battery_percent_idx = 2
 battery_range = [0x00, 0x04]
 charging_status_idx = 3           # optional
+# connected_status_idx = 1	      # optional
 usage_page_and_id = [0xffc0, 0x1] # optional

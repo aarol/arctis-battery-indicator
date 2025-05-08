@@ -1,0 +1,10 @@
+name = "Arctis 9"
+product_id = 0x12c2
+# interface_num = 3                 # optional
+write_bytes = [0x00, 0x20]        # length is two
+read_buf_size = 12
+battery_percent_idx = 3
+battery_range = [0x64, 0x9a]
+charging_status_idx = 4           # optional
+connected_status_idx = 1
+# usage_page_and_id = [0xffc0, 0x1] # optional
