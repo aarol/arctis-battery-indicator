@@ -42,9 +42,6 @@ pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
     info!("Version {VERSION}");
 
-    let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
-    info!("Using locale {locale}");
-
     let config = if config_file_exists() {
         match config_file::load_config() {
             Ok(config) => Some(config),

@@ -1,6 +1,5 @@
-use std::sync::LazyLock;
+use log::info;
 
-#[derive(Debug, Clone, Copy)]
 enum Lang {
     En,
     Fi,
@@ -18,10 +17,13 @@ pub enum Key {
     version,
 }
 
+use std::sync::LazyLock;
+
 static LANG: LazyLock<Lang> = LazyLock::new(|| {
     let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
+    info!("Using locale {locale}");
     match locale.as_str() {
-        "fi-FI" => Lang::Fi,
+        "fi" | "fi-FI" => Lang::Fi,
         _ => Lang::En,
     }
 });
