@@ -3,7 +3,8 @@ use std::{ffi::CStr, rc::Rc};
 use anyhow::Context;
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use log::{debug, error, info, trace, warn};
-use rust_i18n::t;
+
+use crate::lang::{self, Key::*};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChargingState {
@@ -32,11 +33,11 @@ impl Headphone {
         (normalized * 100.0).round() as u8
     }
 
-    pub fn status_text(&self) -> Option<String> {
-        self.charging_state.map(|state| match state {
-            ChargingState::Charging => t!("device_charging").into(),
-            ChargingState::Connected => "".into(),
-            ChargingState::Disconnected => t!("device_disconnected").into(),
+    pub fn status_text(&self) -> Option<&'static str> {
+        self.charging_state.and_then(|state| match state {
+            ChargingState::Charging => Some(lang::t(device_charging)),
+            ChargingState::Connected => None,
+            ChargingState::Disconnected => Some(lang::t(device_disconnected)),
         })
     }
 
@@ -157,7 +158,7 @@ impl std::fmt::Display for Headphone {
             "{name}: {battery}% {remaining}",
             name = self.name,
             battery = self.battery_percentage(),
-            remaining = t!("battery_remaining")
+            remaining = lang::t(battery_remaining)
         )?;
 
         if let Some(status) = self.status_text() {

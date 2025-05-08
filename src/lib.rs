@@ -1,16 +1,17 @@
 mod config_file;
 mod headphone_models;
 mod hid;
+mod lang;
 
 use std::time::{Duration, Instant};
+use lang::Key::*;
 
 use anyhow::Context;
 use config_file::{config_file_exists, ConfigFile};
 use headphone_models::KNOWN_HEADPHONES;
 use hid::{ChargingState, Headphone, HeadphoneModel};
 use hidapi::HidApi;
-use log::{debug, error, info};
-use rust_i18n::t;
+use log::{info,error};
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
     TrayIcon, TrayIconBuilder,
@@ -21,8 +22,6 @@ use winit::{
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::Theme,
 };
-
-rust_i18n::i18n!("locales", fallback = "en-US");
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -43,10 +42,8 @@ pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
     info!("Version {VERSION}");
 
-    debug!("Available locales: {:?}", rust_i18n::available_locales!());
     let locale = &sys_locale::get_locale().unwrap_or("en-US".to_owned());
     info!("Using locale {locale}");
-    rust_i18n::set_locale(locale);
 
     let config = if config_file_exists() {
         match config_file::load_config() {
@@ -90,12 +87,12 @@ impl AppState {
             }
         };
 
-        let version_str = t!("version");
-        let menu_version = MenuItem::new(format!("{version_str} v{VERSION}"), false, None);
+        let menu_version =
+            MenuItem::new(format!("{} v{}", lang::t(version), VERSION), false, None);
 
-        let menu_logs = MenuItem::new(t!("view_logs"), true, None);
-        let menu_github = MenuItem::new(t!("view_updates"), true, None);
-        let menu_close = MenuItem::new(t!("quit_program"), true, None);
+        let menu_logs = MenuItem::new(lang::t(view_logs), true, None);
+        let menu_github = MenuItem::new(lang::t(view_updates), true, None);
+        let menu_close = MenuItem::new(lang::t(quit_program), true, None);
 
         let menu = Menu::new();
 
@@ -179,7 +176,8 @@ impl AppState {
                 }
             },
             None => {
-                self.tray_icon.set_tooltip(Some(t!("no_adapter_found")))?;
+                self.tray_icon
+                    .set_tooltip(Some(lang::t(no_adapter_found)))?;
             }
         }
 

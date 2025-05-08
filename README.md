@@ -38,6 +38,10 @@ Rust and Cargo need to be installed.
 
 * Debugging the application: press `F5` in VS Code with the Rust Analyzer extension and CodeLLDB installed.
 
+### Translations
+
+Translations can be added to the [lang.rs](./src/lang.rs) file.
+
 ## Todo
 
 * Updated icons to show charging states, etc.
