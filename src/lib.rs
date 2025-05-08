@@ -23,7 +23,7 @@ use winit::{
     window::Theme,
 };
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 struct AppState {
     hidapi: HidApi,
@@ -69,15 +69,15 @@ impl AppState {
         let headphone = match &config {
             Some(config) => {
                 info!("Found custom config: trying to find headphones matching it...");
-                let models = vec![HeadphoneModel::from(config.clone())];
-                hid::find_headphone(&models, &mut hidapi).unwrap_or_else(|err| {
+                let models = &[HeadphoneModel::from(config.clone())];
+                hid::find_headphone(models, &mut hidapi).unwrap_or_else(|err| {
                     error!("Failed to connect with custom config: {err:?}");
                     None
                 })
             }
             None => {
-                let models = Vec::from(KNOWN_HEADPHONES);
-                hid::find_headphone(&models, &mut hidapi).unwrap_or_else(|err| {
+                let models = KNOWN_HEADPHONES;
+                hid::find_headphone(models, &mut hidapi).unwrap_or_else(|err| {
                     error!("{err:?}");
                     None
                 })

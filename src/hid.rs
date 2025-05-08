@@ -171,7 +171,7 @@ impl std::fmt::Display for Headphone {
 
 /// Returns the first matching device
 pub fn find_headphone(
-    models: &Vec<HeadphoneModel>,
+    models: &[HeadphoneModel],
     api: &mut HidApi,
 ) -> anyhow::Result<Option<Headphone>> {
     info!("Searching for connected headphones...");
@@ -196,7 +196,7 @@ pub fn find_headphone(
                     && usage_page == model_usage_page
                 {
                     debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
-                    match connect_device(&api, &model, device) {
+                    match connect_device(api, model, device) {
                         Some(headphone) => return Ok(Some(headphone)),
                         None => continue,
                     }
@@ -216,7 +216,7 @@ pub fn find_headphone(
                     "Connecting to device at inteface {}",
                     model.interface_num.unwrap_or(0)
                 );
-                match connect_device(&api, model, device) {
+                match connect_device(api, model, device) {
                     Some(headphone) => return Ok(Some(headphone)),
                     None => continue,
                 }

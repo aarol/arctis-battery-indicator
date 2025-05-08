@@ -43,7 +43,8 @@ impl From<ConfigFile> for HeadphoneModel {
 pub fn config_file_exists() -> bool {
     if let Ok(dir) = std::env::current_dir().context("getting current working directory") {
         let path = dir.join("config.toml");
-        return path.exists();
+        
+        path.exists()   
     } else {
         false
     }
