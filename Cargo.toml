@@ -1,9 +1,9 @@
 [package]
 name = "arctis-battery-indicator"
 version = "2.1.1"
-edition = "2021"
+edition = "2024"
 authors = ["Aaro Luomanen"]
-description = "Battery icon for the SteelSeries Arctis headset."
+description = "Program that displays a battery icon for the SteelSeries Arctis headset."
 license = "MIT"
 homepage = "https://github.com/aarol/"
 default-run = "arctis-battery-indicator-debug"
