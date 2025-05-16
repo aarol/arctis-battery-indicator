@@ -47,7 +47,7 @@ impl Headphone {
         // This may seem very wasteful, but for some reason
         // not reconnecting delays the information about changing state
         // for a significant time.
-        self.device = hidapi.open_path(&self.path)?;
+        self.device = hidapi.open_path(&self.path).context("opening device with HID path")?;
 
         self.device
             .write(&self.model.write_bytes)

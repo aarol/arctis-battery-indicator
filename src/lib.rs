@@ -11,7 +11,7 @@ use config_file::{config_file_exists, ConfigFile};
 use headphone_models::KNOWN_HEADPHONES;
 use hid::{ChargingState, Headphone, HeadphoneModel};
 use hidapi::HidApi;
-use log::{info,error};
+use log::{debug, error, info};
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem},
     TrayIcon, TrayIconBuilder,
@@ -36,6 +36,7 @@ struct AppState {
     menu_close: MenuItem,
 
     last_update: Instant,
+    should_update_icon: bool
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -114,6 +115,7 @@ impl AppState {
             menu_logs,
             hidapi,
             last_update: Instant::now(),
+            should_update_icon: true,
         })
     }
 
@@ -148,6 +150,14 @@ impl AppState {
                 }
                 Ok(changed) => {
                     if changed {
+                        self.should_update_icon = true;
+                        info!("State has changed. New state: {headphone:?}");
+                    }
+                    // why not just check if changed?
+                    // there are two functions here that can fail, and in some situations, like right before going to sleep mode,
+                    // setting the tooltip will timeout, and thus the icon is not updated.
+                    if self.should_update_icon {
+                        debug!("Updating the icon");
                         #[allow(unused_mut)]
                         let mut tooltip_text = headphone.to_string();
 
@@ -156,8 +166,7 @@ impl AppState {
                             tooltip_text += " (Debug)";
                         }
 
-                        info!("State has changed. New state: {headphone:?}");
-                        self.tray_icon.set_tooltip(Some(tooltip_text))?;
+                        self.tray_icon.set_tooltip(Some(&tooltip_text)).with_context(|| format!("setting tooltip text: {tooltip_text}"))?;
 
                         let battery_percent = headphone.battery_percentage();
 
@@ -169,6 +178,8 @@ impl AppState {
                             Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
                             Err(err) => error!("Failed to load icon: {err:?}"),
                         }
+                        
+                        self.should_update_icon = false;
                     }
                 }
             },
