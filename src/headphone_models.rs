@@ -230,7 +230,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         connected_status_idx: None,
         usage_page_and_id: Some((0xffc0, 0x1)),
         read_buf_size: 64,
-        battery_range: (0x00, 0x64),
+        battery_range: (0, 100),
     },
     HeadphoneModel {
         name: "Arctis Nova 5X",
@@ -242,7 +242,7 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         connected_status_idx: None,
         usage_page_and_id: Some((0xffc0, 0x1)),
         read_buf_size: 128,
-        battery_range: (0x00, 0x04),
+        battery_range: (0, 100),
     },
 ];
 
