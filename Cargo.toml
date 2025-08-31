@@ -15,16 +15,16 @@ name = "arctis-battery-indicator-debug"
 path = "src/bin/debug.rs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 dirs = "6.0.0"
 hidapi = "2.6.3"
 log = "0.4.22"
 serde = "1.0.219"
 simplelog = { version = "0.12.2", features = ["paris"] }
 sys-locale = "0.3.2"
-toml = "0.8.21"
-tray-icon = "0.20.1"
-winit = "0.30.10"
+toml = "0.9.5"
+tray-icon = "0.21.1"
+winit = "0.30.12"
 
 [build-dependencies]
 winres = "0.1"
