@@ -1,6 +1,6 @@
 [package]
 name = "arctis-battery-indicator"
-version = "2.1.4"
+version = "2.1.5"
 edition = "2024"
 authors = ["Aaro Luomanen"]
 description = "Program that displays a battery icon for the SteelSeries Arctis headset."

@@ -3,18 +3,18 @@ mod headphone_models;
 mod hid;
 mod lang;
 
-use std::time::{Duration, Instant};
 use lang::Key::*;
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use config_file::{config_file_exists, ConfigFile};
+use config_file::{ConfigFile, config_file_exists};
 use headphone_models::KNOWN_HEADPHONES;
 use hid::{ChargingState, Headphone, HeadphoneModel};
 use hidapi::HidApi;
 use log::{debug, error, info};
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem},
     TrayIcon, TrayIconBuilder,
+    menu::{Menu, MenuEvent, MenuItem},
 };
 use winit::{
     application::ApplicationHandler,
@@ -36,7 +36,7 @@ struct AppState {
     menu_close: MenuItem,
 
     last_update: Instant,
-    should_update_icon: bool
+    should_update_icon: bool,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -85,8 +85,7 @@ impl AppState {
             }
         };
 
-        let menu_version =
-            MenuItem::new(format!("{} v{}", lang::t(version), VERSION), false, None);
+        let menu_version = MenuItem::new(format!("{} v{}", lang::t(version), VERSION), false, None);
 
         let menu_logs = MenuItem::new(lang::t(view_logs), true, None);
         let menu_github = MenuItem::new(lang::t(view_updates), true, None);
@@ -166,7 +165,9 @@ impl AppState {
                             tooltip_text += " (Debug)";
                         }
 
-                        self.tray_icon.set_tooltip(Some(&tooltip_text)).with_context(|| format!("setting tooltip text: {tooltip_text}"))?;
+                        self.tray_icon
+                            .set_tooltip(Some(&tooltip_text))
+                            .with_context(|| format!("setting tooltip text: {tooltip_text}"))?;
 
                         let battery_percent = headphone.battery_percentage();
 
@@ -178,7 +179,7 @@ impl AppState {
                             Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
                             Err(err) => error!("Failed to load icon: {err:?}"),
                         }
-                        
+
                         self.should_update_icon = false;
                     }
                 }
@@ -197,22 +198,25 @@ impl AppState {
         battery_percent: u8,
         charging_state: Option<ChargingState>,
     ) -> anyhow::Result<tray_icon::Icon> {
-        // Map battery_percent to discrete icon levels
+        // Map battery_percent to icon resource id
         let level = match battery_percent {
-            0..=12 => 0,  // 0%
-            13..=37 => 1, // 25%
-            38..=62 => 2, // 50%
-            63..=87 => 3, // 75%
-            _ => 4,       // 100%
+            0..=12 => 1,  // 0%
+            13..=37 => 2, // 25%
+            38..=62 => 3, // 50%
+            63..=87 => 4, // 75%
+            _ => 5,       // 100%
         };
 
-        let theme_offset: u16 = if theme == Theme::Light { 1 } else { 0 };
-        // dark mode icons are (10,20,...,50)
-        // light mode icons are (11,21,...,51)
+        // light mode icons are (10,20,...,50)
+        // dark mode icons are (15,25,...,55)
+        let theme_offset: u16 = if theme == Theme::Light { 5 } else { 0 };
+        // Charging icons are at icon id + 1
+        let charging_offset = (charging_state == Some(ChargingState::Charging)) as u16;
+
         let res_id = if charging_state == Some(ChargingState::Disconnected) {
             10 + theme_offset // empty icon
         } else {
-            (level + 1) * 10 + theme_offset
+            level * 10 + theme_offset + charging_offset
         };
 
         tray_icon::Icon::from_resource(res_id, None)
