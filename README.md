@@ -57,10 +57,6 @@ Rust and Cargo need to be installed.
 
 Translations can be added to the [lang.rs](./src/lang.rs) file.
 
-## Todo
-
-* Updated icons to show charging states, etc.
-
 ## Adding a new headset
 
 I have a post on my website explaining that tries to explain how to do this: <https://aarol.dev/posts/arctis-hid>
