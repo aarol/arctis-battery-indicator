@@ -9,12 +9,26 @@ Adds a small icon to the "system tray" area of the Windows task bar, which displ
 * Works on Windows 10+
 * Built using Rust, with very low resource usage (<1MB RAM)
 * Supports all known Arctis headsets
+* Shows a little green dot to indicate charging
+  ![Charging icon](docs/icon-charging.png)
 
 ## Installation
 
 * Download the [latest release](https://github.com/aarol/arctis-battery-indicator/releases/latest) and run the installer
 
 > Running the installer may result in a Windows defender SmartScreen warning. This happens to all executables that don't have a large enough install count. There's no way around it other than paying hundreds of dollars every year for a signed certificate from Microsoft :(
+
+## Safety
+
+The code that is in this repository is the code that is in the executable. There is a [Github Action](https://github.com/aarol/arctis-battery-indicator/actions) that builds the code from source and creates the installer.
+
+There is no user-friendly way to verify that the .exe file is unmodified by me or anyone else, but if you have a Github account and the [Github Cli](https://cli.github.com/) installed, you can run
+
+```sh
+gh attestation verify '.\ArctisBatteryIndicatorSetup.exe' --owner aarol
+```
+
+Which cryptographically verifies that the file is unmodified from the one built by the Github Action.
 
 ## Troubleshooting
 
