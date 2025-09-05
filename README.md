@@ -10,6 +10,7 @@ Adds a small icon to the "system tray" area of the Windows task bar, which displ
 * Built using Rust, with very low resource usage (<1MB RAM)
 * Supports all known Arctis headsets
 * Shows a little green dot to indicate charging
+
   ![Charging icon](docs/icon-charging.png)
 
 ## Installation
