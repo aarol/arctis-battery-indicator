@@ -244,6 +244,31 @@ pub const KNOWN_HEADPHONES: &[HeadphoneModel] = &[
         read_buf_size: 128,
         battery_range: (0, 100),
     },
+    HeadphoneModel {
+        name: "Arctis Nova Pro Wireless",
+        product_id: 0x12e0,
+        write_bytes: [0x06, 0xb0],
+        battery_percent_idx: 6,
+        charging_status_idx: Some(15),
+        connected_status_idx: None,
+        usage_page_and_id: None,
+        battery_range: (0, 8),
+        interface_num: Some(4),
+        read_buf_size: 128,
+    },
+    // Duplicate entry with different product ID
+    HeadphoneModel {
+        name: "Arctis Nova Pro Wireless",
+        product_id: 0x12e5,
+        write_bytes: [0x06, 0xb0],
+        battery_percent_idx: 6,
+        charging_status_idx: Some(15),
+        connected_status_idx: None,
+        usage_page_and_id: None,
+        battery_range: (0, 8),
+        interface_num: Some(4),
+        read_buf_size: 128,
+    }
 ];
 
 #[cfg(test)]
@@ -255,17 +280,11 @@ mod test {
     #[test]
     fn unique_product_ids() {
         let mut seen_product_ids: HashMap<u16, bool> = HashMap::new();
-        let mut seen_names: HashMap<&str, bool> = HashMap::new();
         KNOWN_HEADPHONES.iter().for_each(|h| {
             assert!(
                 seen_product_ids.insert(h.product_id, true).is_none(),
                 "duplicate entries for {:#x}",
                 &h.product_id
-            );
-            assert!(
-                seen_names.insert(h.name, true).is_none(),
-                "duplicate entries for {}",
-                &h.name
             );
         });
     }

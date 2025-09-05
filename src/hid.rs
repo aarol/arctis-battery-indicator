@@ -47,7 +47,9 @@ impl Headphone {
         // This may seem very wasteful, but for some reason
         // not reconnecting delays the information about changing state
         // for a significant time.
-        self.device = hidapi.open_path(&self.path).context("opening device with HID path")?;
+        self.device = hidapi
+            .open_path(&self.path)
+            .context("opening device with HID path")?;
 
         self.device
             .write(&self.model.write_bytes)
@@ -110,7 +112,7 @@ impl Headphone {
                     let connected_state = buf[connected_status_idx];
                     // connected_state is 1 when on and 3 when off/disconnected for Arctis 9, but might be different for other devices.
                     if connected_state == 1 {
-                        // all devices with separate values for connected status 
+                        // all devices with separate values for connected status
                         // probably use 0 for not charging and 1 for charging, like Arctis 9
                         match buf[charging_status_idx] {
                             0 => Some(ChargingState::Connected),
@@ -121,7 +123,7 @@ impl Headphone {
                                     "Returned charge state is invalid: {:x}; ignoring",
                                     buf[charging_status_idx],
                                 );
-                                return Ok(false)
+                                return Ok(false);
                             }
                         }
                     } else {
@@ -132,17 +134,31 @@ impl Headphone {
                     // Uses the same status idx for charging, connected and disconnected
                     // this is most headphones
 
-                    match buf[charging_status_idx] {
-                        0 => Some(ChargingState::Disconnected),
-                        1 => Some(ChargingState::Charging),
-                        3 => Some(ChargingState::Connected),
-                        _ => {
-                            debug!(
-                                "Returned charge state is invalid: {:x}; ignoring",
-                                buf[charging_status_idx],
-                            );
-                            None
-                        }
+                    match self.model.name {
+                        "Arctis Nova Pro Wireless" => match buf[charging_status_idx] {
+                            1 => Some(ChargingState::Disconnected),
+                            2 => Some(ChargingState::Charging),
+                            8 => Some(ChargingState::Connected),
+                            _ => {
+                                debug!(
+                                    "Returned charge state is invalid: {:x}; ignoring",
+                                    buf[charging_status_idx],
+                                );
+                                None
+                            }
+                        },
+                        _ => match buf[charging_status_idx] {
+                            0 => Some(ChargingState::Disconnected),
+                            1 => Some(ChargingState::Charging),
+                            3 => Some(ChargingState::Connected),
+                            _ => {
+                                debug!(
+                                    "Returned charge state is invalid: {:x}; ignoring",
+                                    buf[charging_status_idx],
+                                );
+                                None
+                            }
+                        },
                     }
                 };
         }
@@ -195,7 +211,9 @@ pub fn find_headphone(
                     && usage_id == model_usage_id
                     && usage_page == model_usage_page
                 {
-                    debug!("Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}");
+                    debug!(
+                        "Connecting to device with usage id {model_usage_id:x}, page {model_usage_page:x}"
+                    );
                     match connect_device(api, model, device) {
                         Some(headphone) => return Ok(Some(headphone)),
                         None => continue,
