@@ -8,7 +8,7 @@
 AppId=88ECD258-57B9-4DDB-ABA3-67DC0289A92C
 AppName={#MyAppDisplayName}
 ; keep this up to date
-AppVersion=2.1.6
+AppVersion=2.1.7
 WizardStyle=modern
 DefaultDirName={localappdata}\Programs\ArctisBatteryIndicator
 DefaultGroupName={#MyAppDisplayName}

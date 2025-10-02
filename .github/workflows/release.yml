@@ -22,6 +22,19 @@ jobs:
 
       - run: ISCC ./installer.iss
             # result in ./Output/ArctisBatteryIndicatorSetup.exe
+            
+      - name: Sign executable
+        env:
+          CERTIFICATE_PFX_BASE64: ${{ secrets.CERTIFICATE_PFX_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          # Decode and save certificate
+          [Convert]::FromBase64String($env:CERTIFICATE_PFX_BASE64) | Set-Content -Path certificate_from_secret.pfx -AsByteStream
+          # Sign the executable
+          & signtool.exe sign /f certificate_from_secret.pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "Output/ArctisBatteryIndicatorSetup.exe"
+          # Clean up certificate
+          Remove-Item certificate_from_secret.pfx
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
