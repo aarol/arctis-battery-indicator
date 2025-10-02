@@ -11,6 +11,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-2022
+    environment: actions
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +32,6 @@ jobs:
         run: |
           # Decode and save certificate
           [Convert]::FromBase64String($env:CERTIFICATE_PFX_BASE64) | Set-Content -Path certificate_from_secret.pfx -AsByteStream
-          Write-Host "Cert length: $($env:CERTIFICATE_PFX_BASE64.Length)"
 
           # Sign the executable
           $SignTool = Get-ChildItem -Path "C:\\Program Files*\\Windows Kits\\*\\bin\\*\\x64\\signtool.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
