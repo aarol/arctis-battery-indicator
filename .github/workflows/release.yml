@@ -34,7 +34,7 @@ jobs:
           # Sign the executable
           $SignTool = Get-ChildItem -Path "C:\\Program Files*\\Windows Kits\\*\\bin\\*\\x64\\signtool.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           $SignToolPath = $SignTool.FullName
-          & SignToolPath sign /f certificate_from_secret.pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "Output/ArctisBatteryIndicatorSetup.exe"
+          & $SignToolPath sign /f certificate_from_secret.pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "Output/ArctisBatteryIndicatorSetup.exe"
           # Clean up certificate
           Remove-Item certificate_from_secret.pfx
 
