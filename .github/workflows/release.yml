@@ -18,6 +18,13 @@ jobs:
           submodules: true
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-cache"
+
+      - name: Build HeadsetControl
+        run: |
+          wget https://github.com/Sapd/HeadsetControl/releases/download/3.1.0/headsetcontrol-windows-x86_64.zip
+          unzip headsetcontrol-windows-x86_64.zip headsetcontrol.exe
 
       - run: cargo build --release
 

@@ -8,7 +8,7 @@
 AppId=88ECD258-57B9-4DDB-ABA3-67DC0289A92C
 AppName={#MyAppDisplayName}
 ; keep this up to date
-AppVersion=2.1.7
+AppVersion=3.0.0
 WizardStyle=modern
 DefaultDirName={localappdata}\Programs\ArctisBatteryIndicator
 DefaultGroupName={#MyAppDisplayName}
@@ -30,8 +30,9 @@ DirExistsWarning=no
 SetupMutex=Arctis-Indicator-Mutex
 
 [Files]
-Source: "target/release/arctis-battery-indicator.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "target/release/arctis-battery-indicator-debug.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "target/release/arctis-battery-indicator.exe"; DestDir: "{app}"; Flags:
+Source: "headsetcontrol.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "target/release/arctis-battery-indicator-debug.exe"; DestDir: "{app}"; Flags:
 Source: "example.config.toml"; DestDir: "{app}"
 
 [Icons]
