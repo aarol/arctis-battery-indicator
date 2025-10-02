@@ -1,6 +1,6 @@
 [package]
 name = "arctis-battery-indicator"
-version = "2.1.7"
+version = "3.0.0"
 edition = "2024"
 authors = ["Aaro Luomanen"]
 description = "Program that displays a battery icon for the SteelSeries Arctis headset."
@@ -20,6 +20,8 @@ dirs = "6.0.0"
 hidapi = "2.6.3"
 log = "0.4.22"
 serde = "1.0.219"
+serde_derive = "1.0.228"
+serde_json = "1.0.145"
 simplelog = { version = "0.12.2", features = ["paris"] }
 sys-locale = "0.3.2"
 toml = "0.9.5"

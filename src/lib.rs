@@ -1,20 +1,14 @@
-mod config_file;
-mod headphone_models;
-mod hid;
+mod headset_control;
 mod lang;
 
 use lang::Key::*;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use config_file::{ConfigFile, config_file_exists};
-use headphone_models::KNOWN_HEADPHONES;
-use hid::{ChargingState, Headphone, HeadphoneModel};
-use hidapi::HidApi;
-use log::{debug, error, info};
+use log::{error, info};
 use tray_icon::{
     TrayIcon, TrayIconBuilder,
-    menu::{Menu, MenuEvent, MenuItem},
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
 };
 use winit::{
     application::ApplicationHandler,
@@ -23,14 +17,15 @@ use winit::{
     window::Theme,
 };
 
+use crate::headset_control::BatteryState;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 struct AppState {
-    hidapi: HidApi,
-    config: Option<ConfigFile>,
-    headphone: Option<Headphone>,
-
     tray_icon: TrayIcon,
+    devices: Vec<headset_control::Device>,
+    selected_device_idx: usize,
+    menu: Menu,
     menu_logs: MenuItem,
     menu_github: MenuItem,
     menu_close: MenuItem,
@@ -43,163 +38,99 @@ pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
     info!("Version {VERSION}");
 
-    let config = if config_file_exists() {
-        match config_file::load_config() {
-            Ok(config) => Some(config),
-            Err(err) => {
-                error!("failed to load configuration file: {err:?}");
-                None
-            }
-        }
-    } else {
-        None
-    };
-
     let event_loop = EventLoop::new().context("Error initializing event loop")?;
 
-    let mut app = AppState::init(config)?;
+    let mut app = AppState::init()?;
 
     Ok(event_loop.run_app(&mut app)?)
 }
 
 impl AppState {
-    pub fn init(config: Option<ConfigFile>) -> anyhow::Result<Self> {
-        let mut hidapi =
-            hidapi::HidApi::new_without_enumerate().context("Failed to initialize hidapi")?;
-
-        let headphone = match &config {
-            Some(config) => {
-                info!("Found custom config: trying to find headphones matching it...");
-                let models = &[HeadphoneModel::from(config.clone())];
-                hid::find_headphone(models, &mut hidapi).unwrap_or_else(|err| {
-                    error!("Failed to connect with custom config: {err:?}");
-                    None
-                })
-            }
-            None => {
-                let models = KNOWN_HEADPHONES;
-                hid::find_headphone(models, &mut hidapi).unwrap_or_else(|err| {
-                    error!("{err:?}");
-                    None
-                })
-            }
-        };
-
+    pub fn init() -> anyhow::Result<Self> {
         let menu_version = MenuItem::new(format!("{} v{}", lang::t(version), VERSION), false, None);
 
         let menu_logs = MenuItem::new(lang::t(view_logs), true, None);
         let menu_github = MenuItem::new(lang::t(view_updates), true, None);
         let menu_close = MenuItem::new(lang::t(quit_program), true, None);
-
         let menu = Menu::new();
+
+        menu.append(&PredefinedMenuItem::separator())?;
 
         menu.append_items(&[&menu_version, &menu_logs, &menu_github, &menu_close])
             .context("Failed to add context menu item")?;
 
-        let icon = Self::load_icon(Theme::Dark, 0, Some(ChargingState::Disconnected))
+        let icon = Self::load_icon(Theme::Dark, 0, BatteryState::BatteryUnavailable)
             .context("loading fallback disconnected icon")?;
 
         let tray_icon = TrayIconBuilder::new()
-            .with_menu(Box::new(menu))
             .with_icon(icon)
+            .with_menu(Box::new(menu.clone()))
             .build()
             .context("Failed to create tray icon")?;
 
         Ok(Self {
-            headphone,
-            config,
             tray_icon,
+            menu,
             menu_close,
             menu_github,
+            selected_device_idx: 0,
             menu_logs,
-            hidapi,
+            devices: vec![],
             last_update: Instant::now(),
             should_update_icon: true,
         })
     }
 
     fn update(&mut self, event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
-        if self.headphone.is_none() {
-            self.headphone = match &self.config {
-                Some(config) => {
-                    info!("Found custom config: trying to find headphones matching it...");
-                    let models = vec![HeadphoneModel::from(config.clone())];
-                    hid::find_headphone(&models, &mut self.hidapi).unwrap_or_else(|err| {
-                        error!("Failed to connect with custom config: {err:?}");
-                        None
-                    })
-                }
-                None => {
-                    let models = Vec::from(KNOWN_HEADPHONES);
-                    hid::find_headphone(&models, &mut self.hidapi).unwrap_or_else(|err| {
-                        error!("{err:?}");
-                        None
-                    })
-                }
-            };
+        headset_control::query_devices(&mut self.devices)?;
+
+        if self.devices.is_empty() {
+            self.tray_icon
+                .set_tooltip(Some(lang::t(no_adapter_found)))?;
+            return Ok(());
         }
 
-        match self.headphone {
-            Some(ref mut headphone) => match headphone.update(&self.hidapi) {
-                Err(err) => {
-                    // an error will only occur when reading/writing to the device fails
-                    // in that situation, the best course of action is to try to reconnect
-                    error!("Failed to access device: {err:?}; trying to reconnect...");
-                    self.headphone = None
-                }
-                Ok(changed) => {
-                    if changed {
-                        self.should_update_icon = true;
-                        info!("State has changed. New state: {headphone:?}");
-                    }
-                    // why not just check if changed?
-                    // there are two functions here that can fail, and in some situations, like right before going to sleep mode,
-                    // setting the tooltip will timeout, and thus the icon is not updated.
-                    if self.should_update_icon {
-                        debug!("Updating the icon");
-                        #[allow(unused_mut)]
-                        let mut tooltip_text = headphone.to_string();
-
-                        #[cfg(debug_assertions)]
-                        {
-                            tooltip_text += " (Debug)";
-                        }
-
-                        self.tray_icon
-                            .set_tooltip(Some(&tooltip_text))
-                            .with_context(|| format!("setting tooltip text: {tooltip_text}"))?;
-
-                        let battery_percent = headphone.battery_percentage();
-
-                        match Self::load_icon(
-                            event_loop.system_theme().unwrap_or(Theme::Dark),
-                            battery_percent,
-                            headphone.charging_state,
-                        ) {
-                            Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
-                            Err(err) => error!("Failed to load icon: {err:?}"),
-                        }
-
-                        self.should_update_icon = false;
-                    }
-                }
-            },
-            None => {
-                self.tray_icon
-                    .set_tooltip(Some(lang::t(no_adapter_found)))?;
-            }
+        if self.selected_device_idx < self.devices.len() {
+            self.selected_device_idx = self.devices.len() - 1;
         }
+        let device = &self.devices[self.selected_device_idx];
+
+        #[allow(unused_mut)]
+        let mut tooltip_text = device.to_string();
+
+        #[cfg(debug_assertions)]
+        {
+            tooltip_text += " (Debug)";
+        }
+
+        self.tray_icon
+            .set_tooltip(Some(&tooltip_text))
+            .with_context(|| format!("setting tooltip text: {tooltip_text}"))?;
+
+        let battery_percent = device.battery.level;
+
+        match Self::load_icon(
+            event_loop.system_theme().unwrap_or(Theme::Dark),
+            battery_percent,
+            device.battery.status,
+        ) {
+            Ok(icon) => self.tray_icon.set_icon(Some(icon))?,
+            Err(err) => error!("Failed to load icon: {err:?}"),
+        }
+
+        self.should_update_icon = false;
 
         Ok(())
     }
 
     fn load_icon(
         theme: winit::window::Theme,
-        battery_percent: u8,
-        charging_state: Option<ChargingState>,
+        battery_percent: isize,
+        state: BatteryState,
     ) -> anyhow::Result<tray_icon::Icon> {
         // Map battery_percent to icon resource id
         let level = match battery_percent {
+            -1 => 1,
             0..=12 => 1,  // 0%
             13..=37 => 2, // 25%
             38..=62 => 3, // 50%
@@ -211,9 +142,9 @@ impl AppState {
         // dark mode icons are (15,25,...,55)
         let theme_offset: u16 = if theme == Theme::Light { 5 } else { 0 };
         // Charging icons are at icon id + 1
-        let charging_offset = (charging_state == Some(ChargingState::Charging)) as u16;
+        let charging_offset = (state == BatteryState::BatteryCharging) as u16;
 
-        let res_id = if charging_state == Some(ChargingState::Disconnected) {
+        let res_id = if state == BatteryState::BatteryUnavailable {
             10 + theme_offset // empty icon
         } else {
             level * 10 + theme_offset + charging_offset
@@ -290,9 +221,9 @@ impl ApplicationHandler<()> for AppState {
 #[test]
 fn load_all_icons() {
     for i in 0..=100 {
-        let _ = AppState::load_icon(Theme::Dark, i, Some(ChargingState::Connected));
+        let _ = AppState::load_icon(Theme::Dark, i, BatteryState::BatteryAvailable);
     }
     for i in 0..=100 {
-        let _ = AppState::load_icon(Theme::Light, i, Some(ChargingState::Connected));
+        let _ = AppState::load_icon(Theme::Light, i, BatteryState::BatteryAvailable);
     }
 }
