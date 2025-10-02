@@ -1,5 +1,6 @@
 mod headset_control;
 mod lang;
+mod menu;
 
 use lang::Key::*;
 use std::time::{Duration, Instant};
@@ -8,7 +9,7 @@ use anyhow::Context;
 use log::{error, info};
 use tray_icon::{
     TrayIcon, TrayIconBuilder,
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    menu::MenuEvent,
 };
 use winit::{
     application::ApplicationHandler,
@@ -19,20 +20,16 @@ use winit::{
 
 use crate::headset_control::BatteryState;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 struct AppState {
     tray_icon: TrayIcon,
     devices: Vec<headset_control::Device>,
-    selected_device_idx: usize,
-    menu: Menu,
-    menu_logs: MenuItem,
-    menu_github: MenuItem,
-    menu_close: MenuItem,
+    context_menu: menu::ContextMenu,
 
     last_update: Instant,
     should_update_icon: bool,
 }
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn run() -> anyhow::Result<()> {
     info!("Starting application");
@@ -47,34 +44,21 @@ pub fn run() -> anyhow::Result<()> {
 
 impl AppState {
     pub fn init() -> anyhow::Result<Self> {
-        let menu_version = MenuItem::new(format!("{} v{}", lang::t(version), VERSION), false, None);
-
-        let menu_logs = MenuItem::new(lang::t(view_logs), true, None);
-        let menu_github = MenuItem::new(lang::t(view_updates), true, None);
-        let menu_close = MenuItem::new(lang::t(quit_program), true, None);
-        let menu = Menu::new();
-
-        menu.append(&PredefinedMenuItem::separator())?;
-
-        menu.append_items(&[&menu_version, &menu_logs, &menu_github, &menu_close])
-            .context("Failed to add context menu item")?;
-
         let icon = Self::load_icon(Theme::Dark, 0, BatteryState::BatteryUnavailable)
             .context("loading fallback disconnected icon")?;
 
+        let context_menu = menu::ContextMenu::new().context("creating context menu")?;
+
         let tray_icon = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_menu(Box::new(menu.clone()))
+            .with_menu(Box::new(context_menu.menu.clone()))
             .build()
             .context("Failed to create tray icon")?;
 
         Ok(Self {
             tray_icon,
-            menu,
-            menu_close,
-            menu_github,
-            selected_device_idx: 0,
-            menu_logs,
+            context_menu,
+
             devices: vec![],
             last_update: Instant::now(),
             should_update_icon: true,
@@ -82,7 +66,13 @@ impl AppState {
     }
 
     fn update(&mut self, event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
+
+        let old_device_count = self.devices.len();
         headset_control::query_devices(&mut self.devices)?;
+
+        if self.devices.len() != old_device_count {
+            self.context_menu.update_device_menu(&self.devices).context("Updating context menu")?;
+        }
 
         if self.devices.is_empty() {
             self.tray_icon
@@ -90,10 +80,7 @@ impl AppState {
             return Ok(());
         }
 
-        if self.selected_device_idx < self.devices.len() {
-            self.selected_device_idx = self.devices.len() - 1;
-        }
-        let device = &self.devices[self.selected_device_idx];
+        let device = &self.devices[self.context_menu.selected_device_idx];
 
         #[allow(unused_mut)]
         let mut tooltip_text = device.to_string();
@@ -183,25 +170,7 @@ impl ApplicationHandler<()> for AppState {
             self.last_update = Instant::now();
         }
         if let Ok(event) = MenuEvent::receiver().try_recv() {
-            match event.id {
-                id if id == self.menu_close.id() => event_loop.exit(),
-
-                id if id == self.menu_github.id() => {
-                    let url = "https://github.com/aarol/arctis-battery-indicator/releases";
-
-                    if let Err(e) = std::process::Command::new("explorer").arg(url).spawn() {
-                        error!("Failed to open {url}: {e:?}");
-                    }
-                }
-                id if id == self.menu_logs.id() => {
-                    if let Ok(dir) = std::env::current_dir() {
-                        if let Err(e) = std::process::Command::new("explorer").arg(&dir).spawn() {
-                            error!("Failed to open path {dir:?}: {e:?}");
-                        }
-                    }
-                }
-                _ => {}
-            }
+            self.context_menu.handle_event(event, event_loop);
         }
     }
     fn window_event(

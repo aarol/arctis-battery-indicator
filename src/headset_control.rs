@@ -14,7 +14,7 @@ const DETACHED_PROCESS: u32 = 0x00000008;
 
 pub fn query_devices(vec: &mut Vec<Device>) -> anyhow::Result<()> {
     let res = process::Command::new("./headsetcontrol.exe")
-        .args(&["--battery", "--output", "json"]) // example: send some argument like "battery level"
+        .args(&["--battery", "--output", "json", "--test-device"]) // example: send some argument like "battery level"
         .stdout(Stdio::piped())
         .creation_flags(DETACHED_PROCESS)
         .output()
@@ -82,13 +82,17 @@ impl Device {
 
 impl std::fmt::Display for Device {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{name}: {battery}% {remaining}",
-            name = self.product,
-            battery = self.battery.level,
-            remaining = lang::t(battery_remaining)
-        )?;
+        if self.battery.level > 0 {
+            write!(
+                f,
+                "{name}: {battery}% {remaining}",
+                name = self.product,
+                battery = self.battery.level,
+                remaining = lang::t(battery_remaining)
+            )?;
+        } else {
+            write!(f, "{}", self.product)?;
+        }
 
         if let Some(status) = self.status_text() {
             write!(f, " {status}")?;
