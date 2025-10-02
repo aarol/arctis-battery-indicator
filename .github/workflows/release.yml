@@ -22,7 +22,7 @@ jobs:
 
       - run: ISCC ./installer.iss
             # result in ./Output/ArctisBatteryIndicatorSetup.exe
-            
+
       - name: Sign executable
         env:
           CERTIFICATE_PFX_BASE64: ${{ secrets.CERTIFICATE_PFX_BASE64 }}
@@ -32,7 +32,9 @@ jobs:
           # Decode and save certificate
           [Convert]::FromBase64String($env:CERTIFICATE_PFX_BASE64) | Set-Content -Path certificate_from_secret.pfx -AsByteStream
           # Sign the executable
-          & signtool.exe sign /f certificate_from_secret.pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "Output/ArctisBatteryIndicatorSetup.exe"
+          $SignTool = Get-ChildItem -Path "C:\\Program Files*\\Windows Kits\\*\\bin\\*\\x64\\signtool.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          $SignToolPath = $SignTool.FullName
+          & SignToolPath sign /f certificate_from_secret.pfx /p $env:CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "Output/ArctisBatteryIndicatorSetup.exe"
           # Clean up certificate
           Remove-Item certificate_from_secret.pfx
 
