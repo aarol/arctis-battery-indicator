@@ -59,7 +59,7 @@ Translations can be added to the [lang.rs](./src/lang.rs) file.
 
 ## Adding a new headset
 
-I have a post on my website explaining that tries to explain how to do this: <https://aarol.dev/posts/arctis-hid>
+I have a post on my website explaining how to do this: <https://aarol.dev/posts/arctis-hid>
 
 The parameters, such as `write_bytes` and `battery_percent_idx` can be discovered by sniffing the USB traffic with something like [WireShark](https://www.wireshark.org/) and [USBPcap](https://desowin.org/usbpcap/)
 
